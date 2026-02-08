@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { FunnelChart } from '@/components/ui/funnel-chart';
 import { ApprovalCard } from '@/components/ui/approval-card';
 import { formatDateTime } from '@/lib/utils';
+import { toast } from '@/components/ui/toast';
 import type { Lead, Sequence, FunnelStep, Suppression } from '@/types';
 
 type Tab = 'pipeline' | 'leads' | 'sequences' | 'approvals' | 'suppression';
@@ -33,21 +34,31 @@ export default function OutreachPage() {
   useEffect(() => { load(); }, [load]);
 
   const updateLeadStatus = async (id: string, status: string) => {
-    await fetch('/api/leads', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status }),
-    });
-    load();
+    try {
+      await fetch('/api/leads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      toast.success(`Lead status updated to ${status}`);
+      load();
+    } catch {
+      toast.error('Failed to update lead status');
+    }
   };
 
   const updateSequenceStatus = async (id: string, status: string) => {
-    await fetch('/api/sequences', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status }),
-    });
-    load();
+    try {
+      await fetch('/api/sequences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      toast.success(status === 'approved' ? 'Email draft approved' : 'Email draft rejected');
+      load();
+    } catch {
+      toast.error('Failed to update sequence status');
+    }
   };
 
   const filteredLeads = leads.filter(l => {

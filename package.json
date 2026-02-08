@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
@@ -20,7 +21,11 @@
     "zustand": "^5.0.11"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3", "sharp", "unrs-resolver"]
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "sharp",
+      "unrs-resolver"
+    ]
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -31,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

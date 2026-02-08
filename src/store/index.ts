@@ -27,6 +27,7 @@ interface DashboardState {
   // UI state
   loading: Record<string, boolean>;
   lastSynced: string | null;
+  feedOpen: boolean;
 
   // Actions
   setOverview: (data: OverviewStats) => void;
@@ -45,6 +46,7 @@ interface DashboardState {
   setFunnel: (data: FunnelStep[]) => void;
   setLoading: (key: string, value: boolean) => void;
   setLastSynced: (ts: string) => void;
+  toggleFeed: () => void;
 }
 
 export const useDashboard = create<DashboardState>((set) => ({
@@ -64,6 +66,7 @@ export const useDashboard = create<DashboardState>((set) => ({
   funnel: [],
   loading: {},
   lastSynced: null,
+  feedOpen: false,
 
   setOverview: (data) => set({ overview: data }),
   setAlerts: (data) => set({ alerts: data }),
@@ -81,6 +84,7 @@ export const useDashboard = create<DashboardState>((set) => ({
   setFunnel: (data) => set({ funnel: data }),
   setLoading: (key, value) => set((s) => ({ loading: { ...s.loading, [key]: value } })),
   setLastSynced: (ts) => set({ lastSynced: ts }),
+  toggleFeed: () => set((s) => ({ feedOpen: !s.feedOpen })),
 }));
 
 // Fetch helper

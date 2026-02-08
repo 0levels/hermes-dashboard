@@ -23,6 +23,29 @@
 
 /* ─── Design Tokens ─────────────────────────────────────── */
 :root {
+  --nav-width: 64px;
+  --header-height: 56px;
+
+  /* Light mode (default for :root, overridden by .dark) */
+  --background: #f8f9fb;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #27272a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --accent: #1e40af;
+  --accent-foreground: #1e3a5f;
+  --border: #e2e8f0;
+  --ring: #2563eb;
+  --success: #16a34a;
+  --warning: #d97706;
+  --destructive: #dc2626;
+  --info: #2563eb;
+}
+
+.dark {
   --background: #0a0a0f;
   --foreground: #f2f2f2;
   --card: #0f0f18;
@@ -39,13 +62,13 @@
   --warning: #f59e0b;
   --destructive: #ef4444;
   --info: #3b82f6;
-
-  --nav-width: 64px;
-  --header-height: 56px;
 }
 
 /* ─── Base ─────────────────────────────────────────────── */
 html {
+  color-scheme: light dark;
+}
+html.dark {
   color-scheme: dark;
 }
 
@@ -60,8 +83,8 @@ body {
 /* ─── Scrollbar ────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
 
 /* ─── Glass Effect ─────────────────────────────────────── */
 .glass {
@@ -232,12 +255,44 @@ body {
   animation: fade-in 0.3s ease-out;
 }
 
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slide-in-right 0.25s ease-out;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 25%,
+    color-mix(in srgb, var(--muted) 60%, var(--foreground)) 50%,
+    var(--muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
 .pulse-dot {
   animation: pulse-dot 2s infinite;
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-count {
+  animation: count-up 0.4s ease-out;
 }
 
 /* ─── Tab Component ────────────────────────────────────── */

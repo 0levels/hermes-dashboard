@@ -3,6 +3,10 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { NavRail } from "@/components/layout/nav-rail";
 import { HeaderBar } from "@/components/layout/header-bar";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { AppShell } from "@/components/layout/app-shell";
+import { CommandPalette } from "@/components/command-palette";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 
 const inter = Inter({
@@ -28,16 +32,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrains.variable} antialiased`}>
-        <HeaderBar />
-        <div className="flex min-h-[calc(100vh-var(--header-height))]">
-          <NavRail />
-          <main className="main-content flex-1 ml-[var(--nav-width)] mt-[var(--header-height)] p-6 overflow-auto">
-            {children}
-          </main>
-        </div>
-        <MobileNav />
+        <ThemeProvider>
+          <HeaderBar />
+          <div className="flex min-h-[calc(100vh-var(--header-height))]">
+            <NavRail />
+            <AppShell>{children}</AppShell>
+          </div>
+          <MobileNav />
+          <CommandPalette />
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

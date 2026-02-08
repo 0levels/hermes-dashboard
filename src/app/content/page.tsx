@@ -6,6 +6,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { PILLAR_LABELS, formatDateTime } from '@/lib/utils';
 import { Check, X } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 import type { ContentPost } from '@/types';
 
 type Tab = 'queue' | 'calendar' | 'metrics';
@@ -23,12 +24,17 @@ export default function ContentPage() {
   useEffect(() => { load(); }, [load]);
 
   const updateStatus = async (id: string, status: string) => {
-    await fetch('/api/content', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status }),
-    });
-    load();
+    try {
+      await fetch('/api/content', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      toast.success(status === 'ready' ? 'Content approved' : 'Content rejected');
+      load();
+    } catch {
+      toast.error('Failed to update content status');
+    }
   };
 
   const queue = posts.filter(p => ['draft', 'pending_approval', 'ready'].includes(p.status));

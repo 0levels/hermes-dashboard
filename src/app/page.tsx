@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { PenLine, MessageCircle, Mail, Users, AlertTriangle, Info, AlertCircle } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { TrendChart } from '@/components/ui/trend-chart';
+import { useSmartPoll } from '@/hooks/use-smart-poll';
 import { timeAgo } from '@/lib/utils';
 import type { OverviewStats, Alert, ActivityEntry, DailyMetrics } from '@/types';
 
@@ -15,19 +16,15 @@ interface OverviewData {
 }
 
 export default function OverviewPage() {
-  const [data, setData] = useState<OverviewData | null>(null);
+  const { data, loading } = useSmartPoll<OverviewData>(
+    () => fetch('/api/overview').then(r => r.json()),
+    { interval: 30_000 },
+  );
 
-  useEffect(() => {
-    // Start sync service
-    fetch('/api/sync').catch(() => {});
+  // Start sync service once
+  useEffect(() => { fetch('/api/sync').catch(() => {}); }, []);
 
-    const load = () => fetch('/api/overview').then(r => r.json()).then(setData).catch(() => {});
-    load();
-    const interval = setInterval(load, 30_000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (!data) {
+  if (!data || loading) {
     return <PageSkeleton />;
   }
 

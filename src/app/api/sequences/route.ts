@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSequences, updateSequenceStatus } from '@/lib/queries';
+import { writebackSequenceStatus } from '@/lib/writeback';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -17,5 +18,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'id and status required' }, { status: 400 });
   }
   updateSequenceStatus(id, status);
+  writebackSequenceStatus(id, status);
   return NextResponse.json({ ok: true });
 }
