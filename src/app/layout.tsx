@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
-import { NavRail } from "@/components/layout/nav-rail";
-import { HeaderBar } from "@/components/layout/header-bar";
-import { MobileNav } from "@/components/layout/mobile-nav";
-import { AppShell } from "@/components/layout/app-shell";
-import { CommandPalette } from "@/components/command-palette";
+import { LayoutContent } from "@/components/layout/layout-content";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
@@ -35,13 +31,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrains.variable} antialiased`}>
         <ThemeProvider>
-          <HeaderBar />
-          <div className="flex min-h-[calc(100vh-var(--header-height))]">
-            <NavRail />
-            <AppShell>{children}</AppShell>
-          </div>
-          <MobileNav />
-          <CommandPalette />
+          <LayoutContent>{children}</LayoutContent>
           <Toaster />
         </ThemeProvider>
       </body>

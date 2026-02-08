@@ -1,8 +1,9 @@
 'use client';
 
-import { Activity, Search, Sun, Moon, Radio, PenLine, Mail, Users } from 'lucide-react';
+import { Activity, Search, Sun, Moon, Radio, PenLine, Mail, Users, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDashboard } from '@/store';
 import { useSmartPoll } from '@/hooks/use-smart-poll';
 
@@ -44,6 +45,7 @@ export function HeaderBar() {
         <ThemeToggle />
         <FeedToggle open={feedOpen} onToggle={toggleFeed} />
         <SyncStatus />
+        <LogoutButton />
       </div>
     </header>
   );
@@ -122,5 +124,28 @@ function SyncStatus() {
       <Activity size={14} />
       <span className="hidden sm:inline font-mono">{lastSync}</span>
     </div>
+  );
+}
+
+function LogoutButton() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogout() {
+    setLoading(true);
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/login');
+    router.refresh();
+  }
+
+  return (
+    <button
+      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+      onClick={handleLogout}
+      disabled={loading}
+      title="Sign out"
+    >
+      <LogOut size={15} />
+    </button>
   );
 }
