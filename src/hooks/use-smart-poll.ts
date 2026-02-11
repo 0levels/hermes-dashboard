@@ -31,7 +31,10 @@ export function useSmartPoll<T>(
   const mountedRef = useRef(true);
   const fetcherRef = useRef(fetcher);
   const prevKeyRef = useRef(key);
-  fetcherRef.current = fetcher;
+
+  useEffect(() => {
+    fetcherRef.current = fetcher;
+  }, [fetcher]);
 
   const doFetch = useCallback(async () => {
     try {

@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Gauge, PenLine, MessageCircle, Mail,
-  FlaskConical, Search, BarChart3, List,
-  Bot, Contact, Zap, Settings,
+  Gauge, Bot, PenLine, MessageCircle, Mail, Contact, Zap,
+  Search, BarChart3, BrainCircuit, Rocket, List, Settings,
 } from 'lucide-react';
 import { useSmartPoll } from '@/hooks/use-smart-poll';
 import { useDashboard } from '@/store';
@@ -18,18 +17,49 @@ interface NavCounts {
   total_pending: number;
 }
 
-const NAV_ITEMS = [
-  { href: '/', label: 'Overview', icon: Gauge },
-  { href: '/agents', label: 'Agents', icon: Bot },
-  { href: '/content', label: 'Content', icon: PenLine, countKey: 'content' as const },
-  { href: '/engagement', label: 'Engage', icon: MessageCircle },
-  { href: '/outreach', label: 'Outreach', icon: Mail, countKey: 'outreach' as const },
-  { href: '/crm', label: 'CRM', icon: Contact, countKey: 'new_leads' as const },
-  { href: '/automations', label: 'Automate', icon: Zap, countKey: 'total_pending' as const },
-  { href: '/experiments', label: 'Experiments', icon: FlaskConical },
-  { href: '/research', label: 'Research', icon: Search, countKey: 'signals_today' as const },
-  { href: '/kpis', label: 'KPIs', icon: BarChart3 },
-  { href: '/activity', label: 'Activity', icon: List },
+type CountKey = keyof NavCounts;
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof Gauge;
+  countKey?: CountKey;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'CORE',
+    items: [
+      { href: '/', label: 'Overview', icon: Gauge },
+      { href: '/agents/squads', label: 'Squads', icon: Bot },
+      { href: '/agents/comms', label: 'Comms', icon: MessageCircle },
+    ],
+  },
+  {
+    label: 'OPERATE',
+    items: [
+      { href: '/content', label: 'Content', icon: PenLine, countKey: 'content' },
+      { href: '/engagement', label: 'Engagement', icon: MessageCircle },
+      { href: '/outreach', label: 'Outreach', icon: Mail, countKey: 'outreach' },
+      { href: '/crm', label: 'CRM', icon: Contact, countKey: 'new_leads' },
+      { href: '/automations', label: 'Automations', icon: Zap, countKey: 'total_pending' },
+    ],
+  },
+  {
+    label: 'OBSERVE',
+    items: [
+      { href: '/research', label: 'Research', icon: Search, countKey: 'signals_today' },
+      { href: '/kpis', label: 'KPIs', icon: BarChart3 },
+      { href: '/memory', label: 'Memory', icon: BrainCircuit },
+      { href: '/deploy', label: 'Deploy', icon: Rocket },
+      { href: '/activity', label: 'Activity', icon: List },
+    ],
+  },
 ];
 
 export function NavRail() {
@@ -42,38 +72,67 @@ export function NavRail() {
   );
 
   return (
-    <nav className="nav-rail fixed left-0 top-[var(--header-height)] bottom-0 w-[var(--nav-width)] glass-strong flex flex-col items-center py-4 gap-1 z-40">
-      {NAV_ITEMS.map(({ href, label, icon: Icon, countKey }) => {
-        const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
-        const count = countKey && counts ? counts[countKey] : 0;
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={`nav-item w-14 ${active ? 'active' : ''} relative`}
-          >
-            <Icon size={20} />
-            <span>{label}</span>
-            {count > 0 && (
-              <span className={`absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 text-[9px] font-bold rounded-full flex items-center justify-center ${
-                countKey === 'signals_today'
-                  ? 'bg-info/20 text-info'
-                  : 'bg-destructive text-destructive-foreground'
-              }`}>
-                {count > 99 ? '99+' : count}
-              </span>
-            )}
-          </Link>
-        );
-      })}
+    <nav className="nav-rail fixed left-0 top-[var(--header-height)] bottom-0 w-[var(--nav-width)] bg-card/92 backdrop-blur-lg border-r border-border/70 z-40 hidden md:flex flex-col">
+      <div className="px-3 py-3 border-b border-border/60 flex items-center gap-2.5">
+        <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
+          H
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold leading-none">Hermes</div>
+          <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wide">Mission View</div>
+        </div>
+      </div>
 
-      {/* Settings at bottom */}
-      <div className="mt-auto">
+      <div className="flex-1 overflow-y-auto px-2 py-2">
+        {NAV_GROUPS.map((group, idx) => (
+          <div key={group.label} className={idx > 0 ? 'mt-3 pt-3 border-t border-border/50' : ''}>
+            <div className="px-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
+              {group.label}
+            </div>
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+                const count = item.countKey && counts ? counts[item.countKey] : 0;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`relative w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-smooth ${
+                      active
+                        ? 'bg-primary/14 text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-surface-2/80'
+                    }`}
+                  >
+                    {active && <span className="absolute left-0 w-0.5 h-5 bg-primary rounded-r" />}
+                    <Icon size={16} />
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {count > 0 && (
+                      <span className={`min-w-[18px] h-4 px-1 text-[9px] font-bold rounded-full flex items-center justify-center ${
+                        item.countKey === 'signals_today' ? 'count-badge-info' : 'count-badge'
+                      }`}>
+                        {count > 99 ? '99+' : count}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="px-2 py-2 border-t border-border/60">
         <Link
           href="/settings"
-          className={`nav-item w-14 ${pathname === '/settings' ? 'active' : ''}`}
+          className={`relative w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-smooth ${
+            pathname === '/settings'
+              ? 'bg-primary/14 text-primary'
+              : 'text-muted-foreground hover:text-foreground hover:bg-surface-2/80'
+          }`}
         >
-          <Settings size={20} />
+          {pathname === '/settings' && <span className="absolute left-0 w-0.5 h-5 bg-primary rounded-r" />}
+          <Settings size={16} />
           <span>Settings</span>
         </Link>
       </div>

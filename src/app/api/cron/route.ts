@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db';
 import { promises as fs } from 'node:fs';
 import fsSync from 'node:fs';
 import path from 'node:path';
+import { requireApiUser } from '@/lib/api-auth';
 
 const CRON_DIR = '/home/leads/.openclaw/cron';
 const LOGS_DIR = '/home/leads/.openclaw/cron/logs';
@@ -10,7 +11,9 @@ const LOGS_DIR = '/home/leads/.openclaw/cron/logs';
 /**
  * POST /api/cron — Check for completed cron jobs and create notifications
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   try {
     const db = getDb();
     const jobsPath = path.join(CRON_DIR, 'jobs.json');
@@ -71,7 +74,9 @@ interface CronJob {
   nextRun?: string | null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   try {
     // Read cron jobs config
     const jobsPath = path.join(CRON_DIR, 'jobs.json');

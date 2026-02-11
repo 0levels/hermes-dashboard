@@ -1,6 +1,7 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { NavRail } from './nav-rail';
 import { HeaderBar } from './header-bar';
 import { MobileNav } from './mobile-nav';
@@ -11,9 +12,37 @@ const AUTH_PATHS = ['/login'];
 
 export function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
 
-  if (AUTH_PATHS.some((p) => pathname.startsWith(p))) {
+  const isAuthPath = AUTH_PATHS.some((p) => pathname.startsWith(p));
+
+  useEffect(() => {
+    if (isAuthPath) return;
+    let cancelled = false;
+    fetch('/api/auth/me', { cache: 'no-store' })
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.ok) {
+          router.replace(`/login?from=${encodeURIComponent(pathname)}`);
+          return;
+        }
+        setAuthChecked(true);
+      })
+      .catch(() => {
+        if (!cancelled) router.replace(`/login?from=${encodeURIComponent(pathname)}`);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthPath, pathname, router]);
+
+  if (isAuthPath) {
     return <>{children}</>;
+  }
+
+  if (!authChecked) {
+    return <div className="min-h-screen" />;
   }
 
   return (

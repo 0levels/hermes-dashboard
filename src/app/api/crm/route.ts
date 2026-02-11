@@ -3,10 +3,15 @@ import { getDb } from '@/lib/db';
 import { maybeSeedExclude } from '@/lib/seed-filter';
 import { writebackLeadUpdate, writebackSequenceStatus } from '@/lib/writeback';
 import type { Lead, Sequence, FunnelStep } from '@/types';
+import { requireApiEditor, requireApiUser } from '@/lib/api-auth';
+import { requireUser } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   const db = getDb();
@@ -34,18 +39,36 @@ export async function GET(request: Request) {
           description: `Email step ${seq.step}: "${seq.subject || 'No subject'}" sent`,
           timestamp: seq.sent_at,
         });
-      } else if (seq.status === 'pending_approval') {
+      }
+      if (seq.status === 'pending_approval') {
         timeline.push({
           id: ++timelineId,
           type: 'pending_approval',
           description: `Email step ${seq.step}: "${seq.subject || 'No subject'}" awaiting approval`,
           timestamp: seq.created_at,
         });
-      } else if (seq.status === 'approved') {
+      }
+      if (seq.status === 'approved') {
         timeline.push({
           id: ++timelineId,
           type: 'approved',
           description: `Email step ${seq.step}: approved`,
+          timestamp: seq.created_at,
+        });
+      }
+      if (seq.status === 'cancelled') {
+        timeline.push({
+          id: ++timelineId,
+          type: 'cancelled',
+          description: `Email step ${seq.step}: cancelled`,
+          timestamp: seq.created_at,
+        });
+      }
+      if (seq.status === 'queued') {
+        timeline.push({
+          id: ++timelineId,
+          type: 'queued',
+          description: `Email step ${seq.step}: queued`,
           timestamp: seq.created_at,
         });
       }
@@ -57,6 +80,19 @@ export async function GET(request: Request) {
         type: 'discovery',
         description: `Lead discovered via ${lead.source || 'unknown source'}`,
         timestamp: lead.created_at,
+      });
+    }
+
+    // CRM activity log entries (status/notes updates, etc.)
+    const activityRows = db.prepare(
+      "SELECT ts, detail FROM activity_log WHERE action = 'crm' AND detail LIKE ? ORDER BY ts DESC LIMIT 50"
+    ).all(`lead:${id}%`) as { ts: string; detail: string }[];
+    for (const row of activityRows) {
+      timeline.push({
+        id: ++timelineId,
+        type: 'crm',
+        description: row.detail,
+        timestamp: row.ts,
       });
     }
 
@@ -131,9 +167,12 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const auth = requireApiEditor(request as Request);
+  if (auth) return auth;
+  const actor = requireUser(request as Request);
   try {
     const body = await request.json();
-    const { id, type, ...updates } = body;
+    const { id, type, task_done, ...updates } = body as { id?: string; type?: string; task_done?: boolean } & Record<string, unknown>;
 
     if (!id) {
       return NextResponse.json({ error: 'id required' }, { status: 400 });
@@ -144,18 +183,26 @@ export async function PATCH(request: Request) {
     // Sequence update (approve/reject)
     if (type === 'sequence') {
       const allowedStatuses = ['approved', 'cancelled', 'queued'];
-      if (!updates.status || !allowedStatuses.includes(updates.status)) {
+      const nextStatus = typeof updates.status === 'string' ? updates.status : null;
+      if (!nextStatus || !allowedStatuses.includes(nextStatus)) {
         return NextResponse.json({ error: 'Invalid sequence status' }, { status: 400 });
       }
-      db.prepare('UPDATE sequences SET status = ? WHERE id = ?').run(updates.status, id);
-      writebackSequenceStatus(id, updates.status);
+      db.prepare('UPDATE sequences SET status = ? WHERE id = ?').run(nextStatus, id);
+      writebackSequenceStatus(id, nextStatus);
+      logAudit({
+        actor,
+        action: 'crm.sequence.update_status',
+        target: `sequence:${id}`,
+        detail: { status: nextStatus },
+      });
       return NextResponse.json({ ok: true });
     }
 
     // Lead update
-    const allowed = ['status', 'tier', 'notes', 'pause_outreach'];
+    const allowed = ['status', 'tier', 'notes', 'pause_outreach', 'next_action_at'];
     const cols: string[] = [];
     const params: unknown[] = [];
+    const before = db.prepare('SELECT status, tier, notes, pause_outreach, next_action_at FROM leads WHERE id = ?').get(id) as Lead | undefined;
 
     for (const key of allowed) {
       if (updates[key] !== undefined) {
@@ -186,6 +233,37 @@ export async function PATCH(request: Request) {
     writebackLeadUpdate(id, writebackUpdates);
 
     const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
+    if (before) {
+      const changes: string[] = [];
+      if (updates.status && before.status !== updates.status) changes.push(`status: ${before.status} -> ${updates.status}`);
+      if (updates.tier && before.tier !== updates.tier) changes.push(`tier: ${before.tier ?? '—'} -> ${updates.tier}`);
+      if (updates.notes !== undefined && before.notes !== updates.notes) changes.push('notes updated');
+      if (updates.pause_outreach !== undefined && before.pause_outreach !== updates.pause_outreach) {
+        changes.push(`outreach ${updates.pause_outreach ? 'paused' : 'resumed'}`);
+      }
+      if (updates.next_action_at !== undefined && before.next_action_at !== updates.next_action_at) {
+        changes.push('next action updated');
+      }
+      if (task_done) {
+        changes.push('task completed');
+      }
+      if (changes.length > 0) {
+        db.prepare(
+          `INSERT INTO activity_log (ts, action, detail, result)
+           VALUES (datetime('now'), ?, ?, ?)`
+        ).run(
+          'crm',
+          `lead:${id} ${changes.join(', ')}`,
+          null,
+        );
+      }
+    }
+    logAudit({
+      actor,
+      action: 'crm.lead.update',
+      target: `lead:${id}`,
+      detail: { updates: writebackUpdates },
+    });
     return NextResponse.json({ ok: true, lead });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

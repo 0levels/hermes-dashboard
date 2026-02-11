@@ -7,10 +7,16 @@ import { timeAgo } from '@/lib/utils';
 import { MessageBubble } from './message-bubble';
 import type { ChatMessage, ChatConversation } from '@/types';
 
-const AGENTS = [
+type AgentListItem = { id: string; name: string; emoji: string };
+
+const DEFAULT_AGENTS = [
   { id: 'hermes', name: 'Hermes', emoji: '\u{1F3DB}\u{FE0F}', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
   { id: 'apollo', name: 'Apollo', emoji: '\u{1F3AF}', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+  { id: 'athena', name: 'Athena', emoji: '\u{1F9E0}', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+  { id: 'metis', name: 'Metis', emoji: '\u{1F4CA}', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+  { id: 'kb-manager', name: 'KB Manager', emoji: '📚', color: 'text-sky-400', bg: 'bg-sky-500/10', border: 'border-sky-500/20' },
 ];
+type Role = 'admin' | 'editor' | 'viewer';
 
 function isGroupedWithPrevious(messages: ChatMessage[], index: number): boolean {
   if (index === 0) return false;
@@ -34,12 +40,16 @@ function formatDateGroup(ts: number): string {
   return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function parseConversationName(convId: string, lastMessage?: { content: string; from_agent: string } | null): { label: string; sublabel: string; emoji: string } {
+function parseConversationName(
+  convId: string,
+  agents: AgentListItem[],
+  lastMessage?: { content: string; from_agent: string } | null,
+): { label: string; sublabel: string; emoji: string } {
   // Session conversations: "session:{agentId}:{uuid}"
   if (convId.startsWith('session:')) {
     const parts = convId.split(':');
     const agentId = parts[1] || 'unknown';
-    const agent = AGENTS.find(a => a.id === agentId);
+    const agent = agents.find(a => a.id === agentId);
     const emoji = agent?.emoji || '\u{1F916}';
     const agentName = agent?.name || agentId;
 
@@ -67,7 +77,7 @@ function parseConversationName(convId: string, lastMessage?: { content: string; 
   // Direct agent conversations
   if (convId.startsWith('agent_')) {
     const agentId = convId.replace('agent_', '');
-    const agent = AGENTS.find(a => a.id === agentId);
+    const agent = agents.find(a => a.id === agentId);
     return { label: agent?.name || agentId, sublabel: 'Direct chat', emoji: agent?.emoji || '\u{1F916}' };
   }
 
@@ -75,11 +85,22 @@ function parseConversationName(convId: string, lastMessage?: { content: string; 
 }
 
 export function AgentChat() {
+  const [role, setRole] = useState<Role>('viewer');
+  const canEdit = role === 'admin' || role === 'editor';
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((payload) => setRole(payload?.user?.role === 'admin' || payload?.user?.role === 'editor' ? payload.user.role : 'viewer'))
+      .catch(() => setRole('viewer'));
+  }, []);
+
   // Sync session transcripts on mount
   useEffect(() => {
+    if (role !== 'admin') return;
     fetch('/api/chat/sync-sessions', { method: 'POST' }).catch(() => {});
     fetch('/api/cron', { method: 'POST' }).catch(() => {});
-  }, []);
+  }, [role]);
 
   const [expanded, setExpanded] = useState(true);
   const [activeConv, setActiveConv] = useState<string | null>(null);
@@ -96,6 +117,21 @@ export function AgentChat() {
     () => fetch('/api/chat/conversations').then(r => r.json()).then(d => d.conversations || []),
     { interval: 15_000, enabled: expanded },
   );
+
+  const { data: discoveredAgents } = useSmartPoll<AgentListItem[]>(
+    () => fetch('/api/agents?real=true')
+      .then(r => r.json())
+      .then((rows) => Array.isArray(rows)
+        ? rows.map((a) => ({
+            id: String(a?.id ?? ''),
+            name: String(a?.name ?? a?.id ?? ''),
+            emoji: String(a?.emoji ?? '🤖'),
+          })).filter((a) => a.id)
+        : []),
+    { interval: 60_000, enabled: expanded },
+  );
+
+  const agents = discoveredAgents && discoveredAgents.length > 0 ? discoveredAgents : DEFAULT_AGENTS;
 
   // Load messages when conversation changes
   const loadMessages = useCallback(async () => {
@@ -129,7 +165,7 @@ export function AgentChat() {
   // Send message
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || !activeConv || sending) return;
+    if (!text || !activeConv || sending || !canEdit) return;
 
     // Determine recipient from conversation or @mention
     const mentionMatch = text.match(/^@(\w+)\s/);
@@ -243,7 +279,7 @@ export function AgentChat() {
             {/* Quick start buttons */}
             <div className="p-2 border-b border-border/20 space-y-1">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 px-2 mb-1">Chat with</div>
-              {AGENTS.map(agent => (
+              {agents.map(agent => (
                 <button
                   key={agent.id}
                   onClick={() => startConversation(agent.id)}
@@ -271,9 +307,7 @@ export function AgentChat() {
               {conversations && conversations.length > 0 ? (
                 conversations.map(conv => {
                   const isActive = activeConv === conv.id;
-                  const agentName = conv.id.replace('agent_', '');
-                  const agent = AGENTS.find(a => a.id === agentName);
-                  const parsed = parseConversationName(conv.id, conv.last_message);
+                  const parsed = parseConversationName(conv.id, agents, conv.last_message);
                   return (
                     <button
                       key={conv.id}
@@ -331,7 +365,7 @@ export function AgentChat() {
                 <div className="px-4 py-2 border-b border-border/30 flex items-center gap-2 shrink-0">
                   {(() => {
                     const firstOperatorMsg = messages.find(m => m.from_agent === 'operator');
-                    const info = parseConversationName(activeConv, firstOperatorMsg || null);
+                    const info = parseConversationName(activeConv, agents, firstOperatorMsg || null);
                     return (
                       <>
                         <span className="text-sm">{info.emoji}</span>
@@ -380,12 +414,13 @@ export function AgentChat() {
                       onKeyDown={handleKeyDown}
                       placeholder={`Message ${activeConv === 'hermes_apollo' ? 'team' : activeConv.replace('agent_', '')}...`}
                       rows={1}
+                      disabled={!canEdit}
                       className="flex-1 resize-none bg-muted/30 rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
                       style={{ maxHeight: '100px' }}
                     />
                     <button
                       onClick={handleSend}
-                      disabled={!input.trim() || sending}
+                      disabled={!canEdit || !input.trim() || sending}
                       className="w-8 h-8 flex items-center justify-center bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
                     >
                       <Send size={14} />

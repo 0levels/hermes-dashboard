@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { requireApiUser } from '@/lib/api-auth';
 
 const STATE_DIR = process.env.HERMES_STATE_DIR || '/home/leads/workspace/state';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   const budgetPath = path.join(STATE_DIR, 'x-api-budget.json');
 
   try {

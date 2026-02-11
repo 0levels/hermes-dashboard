@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db';
 import { getSeedCount } from '@/lib/queries';
 import fs from 'fs';
 import path from 'path';
+import { requireApiUser } from '@/lib/api-auth';
 
 const DB_PATH = process.env.HERMES_DB_PATH || path.join(process.cwd(), 'hermes.db');
 const STATE_DIR = process.env.HERMES_STATE_DIR || '/home/leads/workspace/state';
@@ -13,7 +14,9 @@ const TABLE_NAMES = [
   'daily_metrics', 'activity_log', 'notifications',
 ];
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   try {
     const db = getDb();
 

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Gauge, PenLine, MessageCircle, Mail,
-  FlaskConical, Search, BarChart3, List,
-  MoreHorizontal, Bot, Contact, Zap, Settings,
+  Gauge, Bot, Mail, Contact, MoreHorizontal,
+  PenLine, MessageCircle, Zap, FlaskConical, Search,
+  BarChart3, BrainCircuit, Rocket, List, Settings,
 } from 'lucide-react';
 import { useSmartPoll } from '@/hooks/use-smart-poll';
 import { useDashboard } from '@/store';
@@ -19,28 +19,58 @@ interface NavCounts {
   total_pending: number;
 }
 
-const PRIMARY_ITEMS = [
-  { href: '/', label: 'Overview', icon: Gauge },
-  { href: '/agents', label: 'Agents', icon: Bot },
-  { href: '/outreach', label: 'Outreach', icon: Mail, countKey: 'outreach' as const },
-  { href: '/crm', label: 'CRM', icon: Contact, countKey: 'new_leads' as const },
-];
+type CountKey = keyof NavCounts;
 
-const MORE_ITEMS = [
-  { href: '/content', label: 'Content', icon: PenLine, countKey: 'content' as const },
-  { href: '/engagement', label: 'Engagement', icon: MessageCircle },
-  { href: '/automations', label: 'Automations', icon: Zap, countKey: 'total_pending' as const },
-  { href: '/experiments', label: 'Experiments', icon: FlaskConical },
-  { href: '/research', label: 'Research', icon: Search },
-  { href: '/kpis', label: 'KPIs', icon: BarChart3 },
-  { href: '/activity', label: 'Activity', icon: List },
-  { href: '/settings', label: 'Settings', icon: Settings },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof Gauge;
+  countKey?: CountKey;
+  priority?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'Core',
+    items: [
+      { href: '/', label: 'Overview', icon: Gauge, priority: true },
+      { href: '/agents/squads', label: 'Squads', icon: Bot, priority: true },
+      { href: '/outreach', label: 'Outreach', icon: Mail, countKey: 'outreach', priority: true },
+      { href: '/crm', label: 'CRM', icon: Contact, countKey: 'new_leads', priority: true },
+    ],
+  },
+  {
+    label: 'Operate',
+    items: [
+      { href: '/agents/comms', label: 'Comms', icon: MessageCircle },
+      { href: '/content', label: 'Content', icon: PenLine, countKey: 'content' },
+      { href: '/engagement', label: 'Engagement', icon: MessageCircle },
+      { href: '/automations', label: 'Automations', icon: Zap, countKey: 'total_pending' },
+      { href: '/experiments', label: 'Experiments', icon: FlaskConical },
+    ],
+  },
+  {
+    label: 'Observe',
+    items: [
+      { href: '/research', label: 'Research', icon: Search, countKey: 'signals_today' },
+      { href: '/kpis', label: 'KPIs', icon: BarChart3 },
+      { href: '/memory', label: 'Memory', icon: BrainCircuit },
+      { href: '/deploy', label: 'Deploy', icon: Rocket },
+      { href: '/activity', label: 'Activity', icon: List },
+      { href: '/settings', label: 'Settings', icon: Settings },
+    ],
+  },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
-  const [moreOpen, setMoreOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const realOnly = useDashboard(s => s.realOnly);
 
   const { data: counts } = useSmartPoll<NavCounts>(
@@ -48,103 +78,134 @@ export function MobileNav() {
     { interval: 30_000, key: realOnly },
   );
 
-  // Close menu on outside tap
+  const priorityItems = useMemo(
+    () => NAV_GROUPS.flatMap(g => g.items).filter(i => i.priority),
+    [],
+  );
+  const nonPriorityItems = useMemo(
+    () => NAV_GROUPS.flatMap(g => g.items).filter(i => !i.priority),
+    [],
+  );
+  const sheetGroups = useMemo(
+    () => NAV_GROUPS
+      .map(group => ({ ...group, items: group.items.filter(i => !i.priority) }))
+      .filter(group => group.items.length > 0),
+    [],
+  );
+  const moreActive = nonPriorityItems.some(i => isActive(pathname, i.href));
+  const moreBadge = counts ? (counts.content + counts.total_pending) : 0;
+
   useEffect(() => {
-    if (!moreOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
+    if (!sheetOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (sheetRef.current && !sheetRef.current.contains(e.target as Node)) {
+        setSheetOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [moreOpen]);
-
-  // Close menu on navigation
-  useEffect(() => { setMoreOpen(false); }, [pathname]);
-
-  const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
-
-  const moreActive = MORE_ITEMS.some(item => isActive(item.href));
-
-  // Count of pending items in "More" menu items
-  const moreBadge = counts
-    ? (counts.content + counts.total_pending)
-    : 0;
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [sheetOpen]);
 
   return (
-    <nav className="mobile-nav fixed bottom-0 left-0 right-0 glass-strong z-50 border-t border-border">
-      <div className="flex items-center justify-around h-16 px-2 pb-[env(safe-area-inset-bottom)]">
-        {PRIMARY_ITEMS.map(({ href, label, icon: Icon, countKey }) => {
-          const active = isActive(href);
-          const count = countKey && counts ? counts[countKey] : 0;
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex flex-col items-center gap-0.5 text-[11px] px-3 py-1.5 rounded-lg transition-colors relative ${
-                active ? 'text-primary' : 'text-muted-foreground'
-              }`}
-            >
-              <Icon size={20} />
-              <span>{label}</span>
-              {count > 0 && (
-                <span className="absolute top-0 right-1 min-w-[14px] h-3.5 px-0.5 text-[8px] font-bold rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
-                  {count > 99 ? '99+' : count}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+    <>
+      <nav className="mobile-nav md:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg z-50 border-t border-border/70 safe-area-bottom">
+        <div className="flex items-center justify-around h-14 px-1 pb-[env(safe-area-inset-bottom)]">
+          {priorityItems.map((item) => {
+            const active = isActive(pathname, item.href);
+            const count = item.countKey && counts ? counts[item.countKey] : 0;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-lg min-w-[48px] min-h-[48px] transition-smooth relative ${
+                  active ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                <Icon size={17} />
+                <span className="text-[10px] leading-none">{item.label}</span>
+                {count > 0 && (
+                  <span className="absolute top-0.5 right-1 min-w-[14px] h-3.5 px-0.5 text-[8px] font-bold rounded-full count-badge flex items-center justify-center">
+                    {count > 99 ? '99+' : count}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
 
-        {/* More button */}
-        <div ref={menuRef} className="relative">
           <button
-            onClick={() => setMoreOpen(!moreOpen)}
-            className={`flex flex-col items-center gap-0.5 text-[11px] px-3 py-1.5 rounded-lg transition-colors relative ${
-              moreOpen || moreActive ? 'text-primary' : 'text-muted-foreground'
+            onClick={() => setSheetOpen(true)}
+            className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-lg min-w-[48px] min-h-[48px] transition-smooth relative ${
+              moreActive || sheetOpen ? 'text-primary' : 'text-muted-foreground'
             }`}
           >
-            <MoreHorizontal size={20} />
-            <span>More</span>
+            <MoreHorizontal size={17} />
+            <span className="text-[10px] leading-none">More</span>
             {moreBadge > 0 && (
-              <span className="absolute top-0 right-1 min-w-[14px] h-3.5 px-0.5 text-[8px] font-bold rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
+              <span className="absolute top-0.5 right-1 min-w-[14px] h-3.5 px-0.5 text-[8px] font-bold rounded-full count-badge flex items-center justify-center">
                 {moreBadge > 99 ? '99+' : moreBadge}
               </span>
             )}
           </button>
-
-          {/* More menu — expands upward */}
-          {moreOpen && (
-            <div className="absolute bottom-full right-0 mb-2 w-48 py-1 rounded-xl glass-strong border border-border shadow-lg animate-in">
-              {MORE_ITEMS.map(({ href, label, icon: Icon, countKey }) => {
-                const active = isActive(href);
-                const count = countKey && counts ? counts[countKey] : 0;
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
-                      active
-                        ? 'text-primary bg-primary/10'
-                        : 'text-foreground hover:bg-muted/50'
-                    }`}
-                  >
-                    <Icon size={16} />
-                    <span className="flex-1">{label}</span>
-                    {count > 0 && (
-                      <span className="min-w-[18px] h-4 px-1 text-[9px] font-bold rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
-                        {count}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          )}
         </div>
-      </div>
-    </nav>
+      </nav>
+
+      {sheetOpen && (
+        <div className="md:hidden fixed inset-0 z-[60]">
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            ref={sheetRef}
+            className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl max-h-[72vh] overflow-y-auto safe-area-bottom border-t border-border/70 animate-slide-in"
+          >
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
+            </div>
+
+            <div className="px-4 pb-6">
+              {sheetGroups.map((group, idx) => (
+                <div key={group.label} className={idx > 0 ? 'mt-4 pt-3 border-t border-border/60' : ''}>
+                  <div className="px-1 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
+                    {group.label}
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {group.items.map((item) => {
+                        const active = isActive(pathname, item.href);
+                        const count = item.countKey && counts ? counts[item.countKey] : 0;
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setSheetOpen(false)}
+                            className={`flex items-center gap-2.5 px-3 min-h-[48px] rounded-xl transition-smooth relative ${
+                              active
+                                ? 'bg-primary/14 text-primary'
+                                : 'text-foreground hover:bg-surface-2/80'
+                            }`}
+                          >
+                            <Icon size={16} />
+                            <span className="text-xs font-medium truncate flex-1">{item.label}</span>
+                            {count > 0 && (
+                              <span className={`min-w-[16px] h-4 px-1 text-[8px] font-bold rounded-full flex items-center justify-center ${
+                                item.countKey === 'signals_today' ? 'count-badge-info' : 'count-badge'
+                              }`}>
+                                {count > 99 ? '99+' : count}
+                              </span>
+                            )}
+                          </Link>
+                        );
+                      })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
+}
+
+function isActive(pathname: string, href: string) {
+  return href === '/' ? pathname === '/' : pathname.startsWith(href);
 }

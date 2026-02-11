@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { requireApiUser } from '@/lib/api-auth';
 
 const STAGE_ORDER = ['new', 'enriched', 'scored', 'sequenced', 'contacted', 'replied', 'interested', 'booked'];
 const STAGE_COLORS: Record<string, string> = {
@@ -25,6 +26,8 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   const db = getDb();
   const real = request.nextUrl.searchParams.get('real') === 'true';
 

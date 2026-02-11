@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <main className={`main-content flex-1 ml-[var(--nav-width)] mt-[var(--header-height)] p-4 sm:p-6 pb-20 sm:pb-6 overflow-auto transition-[margin] duration-300 ${
+      <main className={`main-content surface-0 flex-1 ml-[var(--nav-width)] mt-[var(--header-height)] p-3 sm:p-5 pb-20 sm:pb-5 overflow-auto transition-[margin] duration-300 ${
         feedOpen ? 'lg:mr-80' : ''
       }`}>
         {children}

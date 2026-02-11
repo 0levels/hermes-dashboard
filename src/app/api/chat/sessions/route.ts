@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { requireApiUser } from '@/lib/api-auth';
 
 /**
  * GET /api/chat/sessions
  * Returns a list of synced agent sessions with message counts and previews.
  */
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   const db = getDb();
 
   const rows = db.prepare(`

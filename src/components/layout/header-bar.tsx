@@ -28,16 +28,16 @@ export function HeaderBar() {
   );
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-[var(--header-height)] glass-strong flex items-center justify-between px-4 sm:px-6 z-50">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-          <span className="text-primary font-bold text-sm">H</span>
+    <header className="fixed top-0 left-0 right-0 h-[var(--header-height)] bg-card/90 backdrop-blur-sm border-b border-border/70 flex items-center justify-between px-3 sm:px-4 z-50">
+      <div className="flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-md bg-primary/20 flex items-center justify-center">
+          <span className="text-primary font-bold text-xs">H</span>
         </div>
         <span className="font-semibold text-sm tracking-tight">Hermes</span>
 
         {/* Quick stats — hidden on small screens */}
         {stats && (
-          <div className="hidden md:flex items-center gap-3 ml-3 pl-3 border-l border-border/30">
+          <div className="hidden lg:flex items-center gap-2.5 ml-2.5 pl-2.5 border-l border-border/30">
             <QuickStat icon={PenLine} value={stats.posts_today} label="posts" />
             <QuickStat icon={Mail} value={stats.emails_sent} label="sent" />
             <QuickStat icon={Users} value={stats.pipeline_count} label="pipeline" />
@@ -60,8 +60,8 @@ export function HeaderBar() {
 
 function QuickStat({ icon: Icon, value, label }: { icon: typeof PenLine; value: number; label: string }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-      <Icon size={12} />
+    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+      <Icon size={11} />
       <span className="font-mono font-medium text-foreground">{value}</span>
       <span>{label}</span>
     </div>
@@ -71,7 +71,7 @@ function QuickStat({ icon: Icon, value, label }: { icon: typeof PenLine; value: 
 function SeedToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
   return (
     <button
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+      className={`h-7 flex items-center gap-1.5 px-2.5 rounded-md text-[11px] font-medium transition-colors ${
         active
           ? 'bg-success/15 text-success border border-success/30'
           : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-border/30'
@@ -134,15 +134,15 @@ function NotificationBell() {
   return (
     <div className="relative" ref={ref}>
       <button
-        className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors relative ${
-          open ? 'bg-primary/15 text-primary' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-        }`}
+      className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors relative ${
+        open ? 'bg-primary/15 text-primary' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+      }`}
         onClick={() => setOpen(!open)}
         title="Notifications"
       >
         <Bell size={16} />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 text-[9px] font-bold rounded-full count-badge flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -211,7 +211,7 @@ function NotificationBell() {
 function SearchTrigger() {
   return (
     <button
-      className="flex items-center gap-2 bg-muted/50 hover:bg-muted border border-border/30 rounded-lg px-3 py-1.5 text-xs text-muted-foreground transition-colors"
+      className="hidden md:flex items-center gap-2 h-7 px-3 rounded-md bg-muted/55 hover:bg-muted border border-border/30 text-xs text-muted-foreground transition-colors"
       onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
     >
       <Search size={13} />
@@ -223,18 +223,15 @@ function SearchTrigger() {
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) return <div className="w-8 h-8" />;
+  const currentTheme = theme === 'dark' ? 'dark' : 'light';
 
   return (
     <button
-      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+      onClick={() => setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
+      title={`Switch to ${currentTheme === 'dark' ? 'light' : 'dark'} mode`}
     >
-      {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+      {currentTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
     </button>
   );
 }
@@ -242,7 +239,7 @@ function ThemeToggle() {
 function FeedToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
     <button
-      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+      className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${
         open
           ? 'bg-primary/15 text-primary'
           : 'hover:bg-muted text-muted-foreground hover:text-foreground'
@@ -266,10 +263,10 @@ function SyncStatus() {
   }, []);
 
   return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+    <div className="hidden md:flex items-center gap-1.5 text-[11px] text-muted-foreground">
       <div className="w-2 h-2 rounded-full bg-success pulse-dot" />
-      <Activity size={14} />
-      <span className="hidden sm:inline font-mono">{lastSync}</span>
+      <Activity size={12} />
+      <span className="font-mono">{lastSync}</span>
     </div>
   );
 }
@@ -287,7 +284,7 @@ function LogoutButton() {
 
   return (
     <button
-      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+      className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
       onClick={handleLogout}
       disabled={loading}
       title="Sign out"

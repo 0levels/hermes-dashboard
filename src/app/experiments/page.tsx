@@ -27,28 +27,33 @@ export default function ExperimentsPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      <h1 className="text-xl font-semibold">Experiments</h1>
-
-      <div className="flex gap-0 border-b border-border">
-        {([
-          { key: 'current' as Tab, label: `Current (${running.length})` },
-          { key: 'history' as Tab, label: `History (${completed.length})` },
-          { key: 'learnings' as Tab, label: `Learnings (${learnings.length})` },
-        ]).map(t => (
-          <button
-            key={t.key}
-            className={`tab ${tab === t.key ? 'active' : ''}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="panel">
+        <div className="panel-header">
+          <h1 className="text-xl font-semibold">Experiments</h1>
+        </div>
+        <div className="panel-body !p-0">
+          <div className="flex gap-0 border-b border-border">
+            {([
+              { key: 'current' as Tab, label: `Current (${running.length})` },
+              { key: 'history' as Tab, label: `History (${completed.length})` },
+              { key: 'learnings' as Tab, label: `Learnings (${learnings.length})` },
+            ]).map(t => (
+              <button
+                key={t.key}
+                className={`tab ${tab === t.key ? 'active' : ''}`}
+                onClick={() => setTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {tab === 'current' && (
         <div className="space-y-4">
           {running.length === 0 ? (
-            <div className="card p-8 text-center text-muted-foreground text-sm">
+            <div className="panel p-8 text-center text-muted-foreground text-sm">
               No experiments running
             </div>
           ) : (
@@ -62,7 +67,7 @@ export default function ExperimentsPage() {
       {tab === 'history' && (
         <div className="space-y-4">
           {completed.length === 0 ? (
-            <div className="card p-8 text-center text-muted-foreground text-sm">
+            <div className="panel p-8 text-center text-muted-foreground text-sm">
               No completed experiments
             </div>
           ) : (
@@ -76,12 +81,12 @@ export default function ExperimentsPage() {
       {tab === 'learnings' && (
         <div className="space-y-3">
           {learnings.length === 0 ? (
-            <div className="card p-8 text-center text-muted-foreground text-sm">
+            <div className="panel p-8 text-center text-muted-foreground text-sm">
               No validated learnings yet
             </div>
           ) : (
             learnings.map(l => (
-              <div key={l.id} className="card card-hover p-4 flex gap-3">
+              <div key={l.id} className="panel card-hover p-4 flex gap-3">
                 <Lightbulb size={18} className="text-warning mt-0.5 shrink-0" />
                 <div className="space-y-1">
                   <p className="text-sm">{l.learning}</p>
@@ -104,7 +109,7 @@ export default function ExperimentsPage() {
 
 function ExperimentCard({ experiment: exp }: { experiment: Experiment }) {
   return (
-    <div className="card card-hover p-4 space-y-3">
+    <div className="panel card-hover p-4 space-y-3">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
           <FlaskConical size={16} className="text-primary" />

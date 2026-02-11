@@ -1,5 +1,5 @@
 // ─── Content ───────────────────────────────────────────
-export type ContentPlatform = 'x' | 'linkedin';
+export type ContentPlatform = 'x' | 'linkedin' | 'blog';
 export type ContentFormat = 'short_post' | 'thread' | 'carousel' | 'text_post';
 export type ContentStatus = 'draft' | 'pending_approval' | 'ready' | 'published' | 'rejected';
 export type ContentPillar = 1 | 2 | 3 | 4 | 5;
@@ -11,6 +11,7 @@ export interface ContentPost {
   pillar: ContentPillar | null;
   text_preview: string | null;
   full_content: string | null;
+  image_url?: string | null;
   status: ContentStatus;
   scheduled_for: string | null;
   published_at: string | null;
@@ -192,6 +193,10 @@ export type AgentStatus = 'active' | 'idle' | 'error' | 'planned';
 export interface AgentStats {
   actions_today: number;
   actions_week: number;
+  tokens_today: number;
+  tokens_week: number;
+  cost_today: number;
+  cost_week: number;
   last_action: string | null;
   last_action_at: string | null;
   top_skills: { skill: string; count: number }[];
@@ -250,6 +255,92 @@ export interface Alert {
   type: 'warning' | 'info' | 'error';
   message: string;
   created_at: string;
+}
+
+export interface MemoryHealthAgent {
+  agent_id: string;
+  session_files: number;
+  memory_db_exists: boolean;
+  memory_files_indexed: number;
+  memory_chunks: number;
+  coverage_ratio: number | null;
+  last_session_at: string | null;
+  last_indexed_at: string | null;
+}
+
+export interface MemoryHealthPayload {
+  namespace: string;
+  collected_at: string;
+  collective: {
+    shared_dir: string;
+    md_exists: boolean;
+    jsonl_exists: boolean;
+    md_mtime: string | null;
+    jsonl_mtime: string | null;
+    entries: number;
+  };
+  agents: MemoryHealthAgent[];
+}
+
+export interface MemoryDriftEvent {
+  timestamp: string;
+  action: string;
+  reason: string;
+  new_value?: string;
+  old_value?: string;
+  value?: string;
+  confidence?: number;
+}
+
+export interface MemoryDriftDuplicateCluster {
+  type: string;
+  signature: string;
+  size: number;
+  variants: string[];
+  agents: string[];
+}
+
+export interface MemoryDriftContribution {
+  agent_id: string;
+  session_files: number;
+  contributed_entries: number;
+  contribution_ratio: number | null;
+  last_session_at: string | null;
+}
+
+export interface MemoryDriftPayload {
+  namespace: string;
+  collected_at: string;
+  window_days: number;
+  collective_total: number;
+  contradictions: {
+    count: number;
+    top_events: MemoryDriftEvent[];
+    by_agent: Record<string, number>;
+  };
+  duplicates: {
+    count: number;
+    top_clusters: MemoryDriftDuplicateCluster[];
+  };
+  access: {
+    hot_count: number;
+    cold_count: number;
+    never_accessed_count: number;
+    total: number;
+    top_accessed: Array<{
+      id?: string;
+      type?: string;
+      value?: string;
+      access_count: number;
+      last_accessed?: string | null;
+    }>;
+  };
+  contributions: {
+    agents: MemoryDriftContribution[];
+    weak_agents: MemoryDriftContribution[];
+    weak_ratio_threshold: number;
+    weak_min_sessions: number;
+  };
 }
 
 export interface FunnelStep {

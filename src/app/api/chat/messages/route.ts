@@ -1,12 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { sendAgentMessage } from '@/lib/command';
+import { requireApiEditor, requireApiUser } from '@/lib/api-auth';
+import { getAgentIds } from '@/lib/agent-config';
+import { requireUser } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
-const KNOWN_AGENTS = ['hermes', 'apollo'];
+
+interface MessageRow {
+  id: number;
+  conversation_id: string;
+  from_agent: string;
+  to_agent: string | null;
+  content: string;
+  message_type: string;
+  metadata: string | null;
+  created_at: number;
+}
 
 export async function GET(req: NextRequest) {
+  const auth = requireApiUser(req as Request);
+  if (auth) return auth;
   try {
     const db = getDb();
     const { searchParams } = req.nextUrl;
@@ -24,7 +40,7 @@ export async function GET(req: NextRequest) {
     sql += ' ORDER BY created_at ASC LIMIT ?';
     params.push(limit);
 
-    const messages = db.prepare(sql).all(...params) as any[];
+    const messages = db.prepare(sql).all(...params) as MessageRow[];
     const parsed = messages.map(m => ({
       ...m,
       metadata: m.metadata ? JSON.parse(m.metadata) : null,
@@ -38,7 +54,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = requireApiEditor(req as Request);
+  if (auth) return auth;
   try {
+    const actor = requireUser(req as Request);
     const db = getDb();
     const body = await req.json();
 
@@ -61,11 +80,21 @@ export async function POST(req: NextRequest) {
     const result = stmt.run(conversation_id, from, to, content, message_type, now);
     const messageId = result.lastInsertRowid as number;
 
-    const created = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId) as any;
+    const created = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId) as MessageRow | undefined;
+    if (!created) {
+      return NextResponse.json({ error: 'Failed to load created message' }, { status: 500 });
+    }
     const parsedMessage = { ...created, metadata: null };
 
+    logAudit({
+      actor,
+      action: 'chat.message.send',
+      target: `conversation:${conversation_id}`,
+      detail: { from, to, message_type },
+    });
+
     // If recipient is a known agent, forward via gateway (async, non-blocking)
-    if (to && KNOWN_AGENTS.includes(to) && body.forward !== false) {
+    if (to && getAgentIds().includes(to) && body.forward !== false) {
       // Fire-and-forget: forward to agent, save response when it comes back
       forwardToAgent(db, to, content, conversation_id, from).catch(err => {
         console.error(`Failed to forward to ${to}:`, err);

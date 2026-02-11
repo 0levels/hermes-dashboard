@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { requireApiUser } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   const db = getDb();
   const real = request.nextUrl.searchParams.get('real') === 'true';
 

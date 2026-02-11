@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { AGENTS, ACTION_TO_AGENT } from '@/lib/agent-config';
+import { getAgents, ACTION_TO_AGENT } from '@/lib/agent-config';
 import type { ApprovalItem, SkillExecution } from '@/types';
+import { requireApiUser } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   const db = getDb();
 
   // Approval queue: pending content + pending sequences
@@ -61,7 +64,7 @@ export async function GET() {
     }));
 
   // Cron schedule (flattened from all agents)
-  const schedule = AGENTS.flatMap(agent =>
+  const schedule = getAgents().flatMap((agent) =>
     agent.cronJobs.map(job => ({
       ...job,
       agent: agent.id,

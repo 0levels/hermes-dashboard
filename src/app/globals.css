@@ -23,45 +23,57 @@
 
 /* ─── Design Tokens ─────────────────────────────────────── */
 :root {
-  --nav-width: 64px;
-  --header-height: 56px;
+  --nav-width: 220px;
+  --header-height: 48px;
+  --radius: 0.625rem;
 
   /* Light mode (default for :root, overridden by .dark) */
-  --background: #f8f9fb;
-  --foreground: #18181b;
+  --background: #ffffff;
+  --foreground: #0f1014;
   --card: #ffffff;
-  --card-foreground: #27272a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --primary: #2563eb;
+  --card-foreground: #151820;
+  --muted: #f1f3f7;
+  --muted-foreground: #6c7284;
+  --primary: #2f6bff;
   --primary-foreground: #ffffff;
-  --accent: #1e40af;
-  --accent-foreground: #1e3a5f;
-  --border: #e2e8f0;
-  --ring: #2563eb;
+  --accent: #e9edf7;
+  --accent-foreground: #141a2a;
+  --border: #e3e7ef;
+  --ring: #2f6bff;
   --success: #16a34a;
   --warning: #d97706;
   --destructive: #dc2626;
-  --info: #2563eb;
+  --info: #2f6bff;
+
+  /* Surface hierarchy (Mission Control style) */
+  --surface-0: #ffffff;
+  --surface-1: #f5f7fb;
+  --surface-2: #edf0f6;
+  --surface-3: #e5e9f2;
 }
 
 .dark {
-  --background: #0a0a0f;
-  --foreground: #f2f2f2;
-  --card: #0f0f18;
-  --card-foreground: #e4e4e7;
-  --muted: #1a1a2e;
-  --muted-foreground: #71717a;
-  --primary: #3b82f6;
+  --background: #0b0d12;
+  --foreground: #f2f4f8;
+  --card: #10131a;
+  --card-foreground: #e8ebf4;
+  --muted: #171b24;
+  --muted-foreground: #8a91a3;
+  --primary: #3892ff;
   --primary-foreground: #ffffff;
-  --accent: #1e40af;
-  --accent-foreground: #dbeafe;
-  --border: #27272a;
-  --ring: #3b82f6;
+  --accent: #171d2a;
+  --accent-foreground: #dce7ff;
+  --border: #232937;
+  --ring: #3892ff;
   --success: #22c55e;
   --warning: #f59e0b;
-  --destructive: #ef4444;
-  --info: #3b82f6;
+  --destructive: #e85a6b;
+  --info: #3892ff;
+
+  --surface-0: #0b0d12;
+  --surface-1: #0f141d;
+  --surface-2: #131a24;
+  --surface-3: #1b2431;
 }
 
 /* ─── Base ─────────────────────────────────────────────── */
@@ -76,6 +88,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -89,29 +102,37 @@ body {
 /* ─── Glass Effect ─────────────────────────────────────── */
 .glass {
   backdrop-filter: blur(12px);
-  background: color-mix(in srgb, var(--card) 80%, transparent);
+  background: color-mix(in srgb, var(--card) 85%, transparent);
   border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
 }
 
 .glass-strong {
   backdrop-filter: blur(24px);
-  background: color-mix(in srgb, var(--card) 90%, transparent);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
 }
+
+.surface-0 { background: var(--surface-0); }
+.surface-1 { background: var(--surface-1); }
+.surface-2 { background: var(--surface-2); }
+.surface-3 { background: var(--surface-3); }
 
 /* ─── Card Variants ────────────────────────────────────── */
 .card {
-  background: var(--card);
+  background: color-mix(in srgb, var(--card) 96%, transparent);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--foreground) 4%, transparent);
+  overflow: hidden;
 }
 
 .card-hover {
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 .card-hover:hover {
   border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent), 0 8px 20px color-mix(in srgb, var(--foreground) 8%, transparent);
+  transform: translateY(-1px);
 }
 
 /* ─── Badge ────────────────────────────────────────────── */
@@ -124,6 +145,45 @@ body {
   font-weight: 500;
   line-height: 1.25rem;
   white-space: nowrap;
+}
+
+/* Count badges used in nav/header notifications */
+.count-badge {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.count-badge-info {
+  background: color-mix(in srgb, var(--info) 14%, transparent);
+  color: var(--info);
+  border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
+}
+
+.badge-success {
+  background: color-mix(in srgb, var(--success) 16%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 24%, transparent);
+}
+.badge-warning {
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+  color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 24%, transparent);
+}
+.badge-error {
+  background: color-mix(in srgb, var(--destructive) 16%, transparent);
+  color: var(--destructive);
+  border: 1px solid color-mix(in srgb, var(--destructive) 24%, transparent);
+}
+.badge-info {
+  background: color-mix(in srgb, var(--info) 16%, transparent);
+  color: var(--info);
+  border: 1px solid color-mix(in srgb, var(--info) 24%, transparent);
+}
+.badge-neutral {
+  background: color-mix(in srgb, var(--surface-1) 85%, transparent);
+  color: var(--muted-foreground);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
 }
 
 /* ─── Stat Card Glow ───────────────────────────────────── */
@@ -149,24 +209,25 @@ body {
 }
 .data-table th {
   text-align: left;
-  padding: 8px 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  padding: 10px 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
   color: var(--muted-foreground);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
 }
 .data-table td {
-  padding: 10px 12px;
-  font-size: 0.875rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  padding: 9px 12px;
+  font-size: 0.8125rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
 }
 .data-table tbody tr {
   transition: background 0.15s;
 }
 .data-table tbody tr:hover {
-  background: color-mix(in srgb, var(--muted) 50%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 72%, transparent);
 }
 
 /* ─── Button Variants ──────────────────────────────────── */
@@ -174,14 +235,16 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 5px;
+  padding: 6px 12px;
   border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.15s;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.1;
+  transition: all 0.15s ease-out;
   cursor: pointer;
   white-space: nowrap;
+  min-height: 32px;
 }
 .btn:disabled {
   opacity: 0.5;
@@ -219,8 +282,45 @@ body {
   background: color-mix(in srgb, var(--destructive) 25%, transparent);
 }
 .btn-sm {
-  padding: 4px 10px;
-  font-size: 0.75rem;
+  min-height: 26px;
+  padding: 3px 9px;
+  font-size: 0.6875rem;
+}
+
+/* ─── Form Controls ───────────────────────────────────── */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select,
+textarea {
+  background: color-mix(in srgb, var(--surface-1) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  color: var(--foreground);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, background 0.15s ease-out;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select {
+  min-height: 32px;
+  padding: 6px 10px;
+}
+
+textarea {
+  padding: 8px 10px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in srgb, var(--muted-foreground) 85%, transparent);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--primary) 48%, var(--border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 /* ─── Nav Rail ─────────────────────────────────────────── */
@@ -228,22 +328,69 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 8px 4px;
-  border-radius: 8px;
+  gap: 1px;
+  padding: 6px 4px;
+  border-radius: 10px;
   color: var(--muted-foreground);
-  font-size: 0.625rem;
+  font-size: 0.58rem;
+  line-height: 1;
   transition: all 0.15s;
   cursor: pointer;
   text-decoration: none;
 }
 .nav-item:hover {
   color: var(--foreground);
-  background: var(--muted);
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
 }
 .nav-item.active {
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.panel {
+  background: color-mix(in srgb, var(--card) 96%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-body {
+  padding: 16px;
+}
+
+.stat-tile {
+  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.transition-smooth {
+  transition: all 0.2s ease-out;
+}
+
+.glow-primary {
+  box-shadow: 0 0 20px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ─── Animations ───────────────────────────────────────── */

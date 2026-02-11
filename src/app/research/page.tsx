@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { SignalCard } from '@/components/ui/signal-card';
 import { useDashboard } from '@/store';
-import type { Signal, SignalType } from '@/types';
+import type { Signal } from '@/types';
 
 const SIGNAL_TYPES: { key: string; label: string }[] = [
   { key: '', label: 'All' },
@@ -35,49 +35,53 @@ export default function ResearchPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold">Research</h1>
-        <div className="flex gap-3">
-          <select
-            className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm"
-            value={typeFilter}
-            onChange={e => setTypeFilter(e.target.value)}
-          >
-            {SIGNAL_TYPES.map(t => (
-              <option key={t.key} value={t.key}>{t.label}</option>
-            ))}
-          </select>
-          <select
-            className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm"
-            value={relevanceFilter}
-            onChange={e => setRelevanceFilter(e.target.value)}
-          >
-            <option value="">All Relevance</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
+      <div className="panel">
+        <div className="panel-header flex items-center justify-between flex-wrap gap-3">
+          <h1 className="text-xl font-semibold">Research</h1>
+          <div className="flex gap-3">
+            <select
+              value={typeFilter}
+              onChange={e => setTypeFilter(e.target.value)}
+            >
+              {SIGNAL_TYPES.map(t => (
+                <option key={t.key} value={t.key}>{t.label}</option>
+              ))}
+            </select>
+            <select
+              value={relevanceFilter}
+              onChange={e => setRelevanceFilter(e.target.value)}
+            >
+              <option value="">All Relevance</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Today's signals */}
       {todaySignals.length > 0 && (
-        <section>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">Today&apos;s Signals ({todaySignals.length})</h2>
-          <div className="space-y-3">
+        <section className="panel">
+          <div className="panel-header">
+            <h2 className="section-title">Today&apos;s Signals ({todaySignals.length})</h2>
+          </div>
+          <div className="panel-body space-y-3">
             {todaySignals.map(s => <SignalCard key={s.id} signal={s} />)}
           </div>
         </section>
       )}
 
       {/* Earlier signals */}
-      <section>
-        <h2 className="text-sm font-medium text-muted-foreground mb-3">
-          {todaySignals.length > 0 ? 'Earlier' : 'All Signals'} ({otherSignals.length})
-        </h2>
-        <div className="space-y-3">
+      <section className="panel">
+        <div className="panel-header">
+          <h2 className="section-title">
+            {todaySignals.length > 0 ? 'Earlier' : 'All Signals'} ({otherSignals.length})
+          </h2>
+        </div>
+        <div className="panel-body space-y-3">
           {otherSignals.length === 0 && todaySignals.length === 0 ? (
-            <div className="card p-8 text-center text-muted-foreground text-sm">
+            <div className="panel p-8 text-center text-muted-foreground text-sm">
               No research signals yet
             </div>
           ) : (

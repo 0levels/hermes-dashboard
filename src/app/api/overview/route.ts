@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOverviewStats, getAlerts, getActivityLog, getDailyMetrics } from '@/lib/queries';
 import { getDb } from '@/lib/db';
-import { AGENTS, ACTION_TO_AGENT } from '@/lib/agent-config';
+import { getAgents, ACTION_TO_AGENT } from '@/lib/agent-config';
+import { requireApiUser } from '@/lib/api-auth';
 
 interface AgentBrief {
   id: string;
@@ -29,7 +30,7 @@ function getAgentBriefs(excludeSeed: boolean): AgentBrief[] {
   const db = getDb();
   const today = new Date().toISOString().slice(0, 10);
 
-  return AGENTS.map(agent => {
+  return getAgents().map((agent) => {
     // Find actions mapped to this agent
     const agentActions = Object.entries(ACTION_TO_AGENT)
       .filter(([, v]) => v.agent === agent.id)
@@ -169,6 +170,8 @@ function getActionItems(excludeSeed: boolean): ActionItem[] {
 }
 
 export async function GET(req: NextRequest) {
+  const auth = requireApiUser(req as Request);
+  if (auth) return auth;
   const real = req.nextUrl.searchParams.get('real') === 'true';
   const stats = getOverviewStats({ excludeSeed: real });
   const alerts = getAlerts({ excludeSeed: real });

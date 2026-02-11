@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { maybeSeedExclude } from '@/lib/seed-filter';
+import { requireApiUser } from '@/lib/api-auth';
 
 // Lightweight endpoint — returns pending counts for nav badges
 // Polled by nav-rail every 30s
 export async function GET(req: NextRequest) {
+  const auth = requireApiUser(req as Request);
+  if (auth) return auth;
   try {
     const db = getDb();
     const sf = (table: string) => maybeSeedExclude(req, table);

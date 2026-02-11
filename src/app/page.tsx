@@ -59,10 +59,13 @@ interface OverviewData {
   action_items?: ActionItem[];
 }
 
+type Role = 'admin' | 'editor' | 'viewer';
+
 export default function OverviewPage() {
   const { realOnly } = useDashboard();
   const realParam = realOnly ? '?real=true' : '';
   const [refreshKey, setRefreshKey] = useState(0);
+  const [role, setRole] = useState<Role>('viewer');
 
   const { data, loading } = useSmartPoll<OverviewData>(
     () => fetch(`/api/overview${realParam}`).then(r => r.json()),
@@ -74,6 +77,13 @@ export default function OverviewPage() {
     { interval: 60_000 },
   );
 
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((payload) => setRole(payload?.user?.role === 'admin' || payload?.user?.role === 'editor' ? payload.user.role : 'viewer'))
+      .catch(() => setRole('viewer'));
+  }, []);
+
   // Start sync service once
   useEffect(() => { fetch('/api/sync').catch(() => {}); }, []);
 
@@ -82,6 +92,7 @@ export default function OverviewPage() {
   }
 
   const { stats, alerts, recentActivity, metrics, agents, action_items } = data;
+  const canEdit = role === 'admin' || role === 'editor';
 
   const metricsReversed = [...metrics].reverse();
   const impressionData = metricsReversed.map(m => ({ date: m.date, value: m.total_impressions }));
@@ -91,13 +102,17 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      <h1 className="text-xl font-semibold">Overview</h1>
+      <div className="panel">
+        <div className="panel-header">
+          <h1 className="text-xl font-semibold">Overview</h1>
+        </div>
+      </div>
 
       {/* Agent Status Strip */}
       {agents && agents.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {agents.map(agent => (
-            <Link key={agent.id} href="/agents" className="card card-hover p-4 flex items-center gap-4">
+            <Link key={agent.id} href="/agents/squads" className="panel card-hover p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-lg shrink-0">
                 {agent.emoji}
               </div>
@@ -136,13 +151,15 @@ export default function OverviewPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* X API Budget Widget */}
         {budget && !('error' in budget) && (
-          <div className="card p-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+          <div className="panel">
+            <div className="panel-header">
+              <h3 className="section-title flex items-center gap-2">
               <Search size={14} />
               X API Budget
               <span className="text-[10px] text-muted-foreground font-mono ml-auto">{budget.date}</span>
-            </h3>
-            <div className="space-y-3">
+              </h3>
+            </div>
+            <div className="panel-body space-y-3">
               <BudgetBar
                 label="Search"
                 used={budget.calls}
@@ -161,9 +178,9 @@ export default function OverviewPage() {
 
         {/* Action Items — pending approvals */}
         {action_items && action_items.length > 0 && (
-          <div className="card p-4 lg:col-span-2">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <div className="panel lg:col-span-2">
+            <div className="panel-header flex items-center justify-between">
+              <h3 className="section-title flex items-center gap-2">
                 <Zap size={14} className="text-warning" />
                 Action Items
                 <span className="text-[10px] bg-warning/15 text-warning px-2 py-0.5 rounded-full font-semibold">
@@ -185,11 +202,12 @@ export default function OverviewPage() {
                 </Link>
               </div>
             </div>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="panel-body space-y-2 max-h-64 overflow-y-auto">
               {action_items.map(item => (
                 <ActionItemCard
                   key={item.id}
                   item={item}
+                  canEdit={canEdit}
                   onAction={() => setRefreshKey(k => k + 1)}
                 />
               ))}
@@ -232,16 +250,23 @@ export default function OverviewPage() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="card p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Impressions (12 weeks)</h3>
+        <div className="panel">
+          <div className="panel-header">
+            <h3 className="section-title">Impressions (12 weeks)</h3>
+          </div>
+          <div className="panel-body">
           <TrendChart
             data={metricsReversed.map(m => ({ date: m.date.slice(5), impressions: m.total_impressions }))}
             xKey="date"
             lines={[{ key: 'impressions', color: 'var(--primary)', label: 'Impressions' }]}
           />
+          </div>
         </div>
-        <div className="card p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Engagement & Sends (12 weeks)</h3>
+        <div className="panel">
+          <div className="panel-header">
+            <h3 className="section-title">Engagement & Sends (12 weeks)</h3>
+          </div>
+          <div className="panel-body">
           <TrendChart
             data={metricsReversed.map(m => ({
               date: m.date.slice(5),
@@ -254,6 +279,7 @@ export default function OverviewPage() {
               { key: 'sends', color: 'var(--warning)', label: 'Sends' },
             ]}
           />
+          </div>
         </div>
       </div>
 
@@ -267,9 +293,11 @@ export default function OverviewPage() {
       {/* Bottom row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Activity Feed */}
-        <div className="card p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Recent Activity</h3>
-          <div className="space-y-2 max-h-80 overflow-y-auto">
+        <div className="panel">
+          <div className="panel-header">
+            <h3 className="section-title">Recent Activity</h3>
+          </div>
+          <div className="panel-body space-y-2 max-h-80 overflow-y-auto">
             {recentActivity.length === 0 ? (
               <p className="text-sm text-muted-foreground">No activity yet</p>
             ) : (
@@ -292,9 +320,11 @@ export default function OverviewPage() {
         </div>
 
         {/* Alerts */}
-        <div className="card p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Alerts</h3>
-          <div className="space-y-2">
+        <div className="panel">
+          <div className="panel-header">
+            <h3 className="section-title">Alerts</h3>
+          </div>
+          <div className="panel-body space-y-2">
             {alerts.length === 0 ? (
               <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">
                 <CheckCircle size={16} className="mr-2 text-success" />
@@ -352,10 +382,11 @@ function BudgetBar({ label, used, limit, icon }: { label: string; used: number; 
   );
 }
 
-function ActionItemCard({ item, onAction }: { item: ActionItem; onAction: () => void }) {
+function ActionItemCard({ item, onAction, canEdit }: { item: ActionItem; onAction: () => void; canEdit: boolean }) {
   const [acting, setActing] = useState<string | null>(null);
 
   async function handleAction(action: 'approve' | 'reject') {
+    if (!canEdit) return;
     setActing(action);
     try {
       if (item.type === 'content') {
@@ -395,22 +426,26 @@ function ActionItemCard({ item, onAction }: { item: ActionItem; onAction: () => 
         </div>
         <p className="text-[11px] text-muted-foreground truncate">{item.subtitle}</p>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        <button
-          onClick={() => handleAction('approve')}
-          disabled={acting !== null}
-          className="flex items-center gap-1 text-[10px] font-medium bg-success/15 text-success hover:bg-success/25 px-2 py-1 rounded transition-colors disabled:opacity-50"
-        >
-          {acting === 'approve' ? <Loader2 size={10} className="animate-spin" /> : <ThumbsUp size={10} />}
-        </button>
-        <button
-          onClick={() => handleAction('reject')}
-          disabled={acting !== null}
-          className="flex items-center gap-1 text-[10px] font-medium bg-destructive/15 text-destructive hover:bg-destructive/25 px-2 py-1 rounded transition-colors disabled:opacity-50"
-        >
-          {acting === 'reject' ? <Loader2 size={10} className="animate-spin" /> : <ThumbsDown size={10} />}
-        </button>
-      </div>
+      {canEdit ? (
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => handleAction('approve')}
+            disabled={acting !== null}
+            className="flex items-center gap-1 text-[10px] font-medium bg-success/15 text-success hover:bg-success/25 px-2 py-1 rounded transition-colors disabled:opacity-50"
+          >
+            {acting === 'approve' ? <Loader2 size={10} className="animate-spin" /> : <ThumbsUp size={10} />}
+          </button>
+          <button
+            onClick={() => handleAction('reject')}
+            disabled={acting !== null}
+            className="flex items-center gap-1 text-[10px] font-medium bg-destructive/15 text-destructive hover:bg-destructive/25 px-2 py-1 rounded transition-colors disabled:opacity-50"
+          >
+            {acting === 'reject' ? <Loader2 size={10} className="animate-spin" /> : <ThumbsDown size={10} />}
+          </button>
+        </div>
+      ) : (
+        <span className="text-[10px] text-muted-foreground shrink-0">read-only</span>
+      )}
     </div>
   );
 }
@@ -432,17 +467,17 @@ function PageSkeleton() {
       <h1 className="text-xl font-semibold">Overview</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[1, 2].map(i => (
-          <div key={i} className="card p-4 h-20 animate-pulse bg-muted/20" />
+          <div key={i} className="panel p-4 h-20 animate-pulse bg-muted/20" />
         ))}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="card p-4 h-32 animate-pulse bg-muted/20" />
+          <div key={i} className="panel p-4 h-32 animate-pulse bg-muted/20" />
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {[1, 2].map(i => (
-          <div key={i} className="card p-4 h-64 animate-pulse bg-muted/20" />
+          <div key={i} className="panel p-4 h-64 animate-pulse bg-muted/20" />
         ))}
       </div>
     </div>

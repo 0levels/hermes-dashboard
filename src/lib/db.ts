@@ -18,6 +18,13 @@ export function getDb(): Database.Database {
   return _db;
 }
 
+export function resetDbForTests(): void {
+  if (_db) {
+    _db.close();
+    _db = null;
+  }
+}
+
 function migrate(db: Database.Database) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS content_posts (

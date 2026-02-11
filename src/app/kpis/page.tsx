@@ -34,10 +34,19 @@ export default function KPIsPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      <h1 className="text-xl font-semibold">KPIs</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-xl font-semibold">KPIs</h1>
+        <div className="text-xs text-muted-foreground">
+          Weeks tracked <span className="font-mono text-foreground">{weekly.length}</span>
+        </div>
+      </div>
 
       {/* Weekly metrics table */}
-      <div className="card overflow-hidden">
+      <div className="panel">
+        <div className="panel-header">
+          <h3 className="section-title">Weekly Metrics</h3>
+        </div>
+        <div className="panel-body !p-0">
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
@@ -59,28 +68,34 @@ export default function KPIsPage() {
             </tbody>
           </table>
         </div>
+        </div>
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="card p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Impressions (weekly)</h3>
+        <div className="panel">
+          <div className="panel-header"><h3 className="section-title">Impressions (weekly)</h3></div>
+          <div className="panel-body">
           <TrendChart
             data={weeklyReversed.map(w => ({ week: w.week, impressions: w.impressions }))}
             xKey="week"
             lines={[{ key: 'impressions', color: 'var(--primary)', label: 'Impressions' }]}
           />
+          </div>
         </div>
-        <div className="card p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Engagement Rate (weekly)</h3>
+        <div className="panel">
+          <div className="panel-header"><h3 className="section-title">Engagement Rate (weekly)</h3></div>
+          <div className="panel-body">
           <TrendChart
             data={weeklyReversed.map(w => ({ week: w.week, rate: w.engagement_rate }))}
             xKey="week"
             lines={[{ key: 'rate', color: 'var(--success)', label: 'Engagement %' }]}
           />
+          </div>
         </div>
-        <div className="card p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Leads & Sends (weekly)</h3>
+        <div className="panel">
+          <div className="panel-header"><h3 className="section-title">Leads & Sends (weekly)</h3></div>
+          <div className="panel-body">
           <TrendChart
             data={weeklyReversed.map(w => ({ week: w.week, leads: w.leads_added, sends: w.emails_sent }))}
             xKey="week"
@@ -89,25 +104,32 @@ export default function KPIsPage() {
               { key: 'sends', color: 'var(--warning)', label: 'Sends' },
             ]}
           />
+          </div>
         </div>
-        <div className="card p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Reply Rate (weekly)</h3>
+        <div className="panel">
+          <div className="panel-header"><h3 className="section-title">Reply Rate (weekly)</h3></div>
+          <div className="panel-body">
           <TrendChart
             data={weeklyReversed.map(w => ({ week: w.week, reply: w.reply_rate }))}
             xKey="week"
             lines={[{ key: 'reply', color: 'var(--destructive)', label: 'Reply %' }]}
           />
+          </div>
         </div>
       </div>
 
       {/* 90-day progress */}
-      <div className="card p-4">
-        <h3 className="text-sm font-medium text-muted-foreground mb-4">90-Day Goal Progress</h3>
+      <div className="panel">
+        <div className="panel-header">
+          <h3 className="section-title">90-Day Goal Progress</h3>
+        </div>
+        <div className="panel-body">
         <div className="space-y-3">
           <ProgressBar label="Total Impressions" current={daily.reduce((s, d) => s + d.total_impressions, 0)} target={TARGETS.impressions} />
           <ProgressBar label="Total Leads" current={daily.reduce((s, d) => s + d.discoveries, 0)} target={TARGETS.leads_added} />
           <ProgressBar label="Total Sends" current={daily.reduce((s, d) => s + d.sends, 0)} target={TARGETS.emails_sent} />
           <ProgressBar label="Calls Booked" current={0} target={TARGETS.calls_booked} />
+        </div>
         </div>
       </div>
     </div>

@@ -50,7 +50,7 @@ export default function ContentPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Content</h1>
         <select
-          className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm"
+          className="px-3"
           value={filter}
           onChange={e => setFilter(e.target.value)}
         >
@@ -64,6 +64,8 @@ export default function ContentPage() {
       </div>
 
       {/* Tabs */}
+      <div className="panel">
+        <div className="panel-body !p-0">
       <div className="flex gap-0 border-b border-border">
         {(['queue', 'calendar', 'metrics'] as Tab[]).map(t => (
           <button
@@ -75,9 +77,15 @@ export default function ContentPage() {
           </button>
         ))}
       </div>
+      </div>
+      </div>
 
       {tab === 'queue' && (
-        <div className="card overflow-hidden">
+        <div className="panel">
+          <div className="panel-header">
+            <h3 className="section-title">Queue</h3>
+          </div>
+          <div className="panel-body !p-0">
           <DataTable
             columns={[
               { key: 'platform', label: 'Platform', render: (r: ContentPost) => (
@@ -113,12 +121,16 @@ export default function ContentPage() {
             keyField="id"
             emptyMessage="No content in queue"
           />
+          </div>
         </div>
       )}
 
       {tab === 'calendar' && (
-        <div className="card p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-4">Published & Scheduled</h3>
+        <div className="panel">
+          <div className="panel-header">
+            <h3 className="section-title">Published & Scheduled</h3>
+          </div>
+          <div className="panel-body">
           <div className="grid grid-cols-7 gap-2">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
               <div key={d} className="text-center text-xs text-muted-foreground font-medium py-1">{d}</div>
@@ -138,13 +150,17 @@ export default function ContentPage() {
               </div>
             ))}
           </div>
+          </div>
         </div>
       )}
 
       {tab === 'metrics' && (
         <div className="space-y-4">
-          <div className="card p-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Engagement by Post</h3>
+          <div className="panel">
+            <div className="panel-header">
+              <h3 className="section-title">Engagement by Post</h3>
+            </div>
+            <div className="panel-body">
             <TrendChart
               data={published.slice(0, 20).map(p => ({
                 label: p.text_preview?.slice(0, 15) || p.id.slice(0, 8),
@@ -158,10 +174,15 @@ export default function ContentPage() {
               ]}
               height={250}
             />
+            </div>
           </div>
 
           {/* Top performers */}
-          <div className="card overflow-hidden">
+          <div className="panel">
+            <div className="panel-header">
+              <h3 className="section-title">Top Performers</h3>
+            </div>
+            <div className="panel-body !p-0">
             <DataTable
               columns={[
                 { key: 'text_preview', label: 'Post', render: (r: ContentPost) => (
@@ -178,6 +199,7 @@ export default function ContentPage() {
               keyField="id"
               emptyMessage="No published content yet"
             />
+            </div>
           </div>
         </div>
       )}

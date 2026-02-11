@@ -31,54 +31,77 @@ export default function ActivityPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold">Activity Log</h1>
-        <select
-          className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm"
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-        >
-          {ACTION_FILTERS.map(f => (
-            <option key={f.key} value={f.key}>{f.label}</option>
-          ))}
-        </select>
+      <div className="panel">
+        <div className="panel-header flex items-center justify-between flex-wrap gap-3">
+          <h1 className="text-xl font-semibold">Activity Log</h1>
+          <div className="flex items-center gap-2">
+            <button
+              className="btn btn-ghost text-xs"
+              onClick={() => {
+                const params = new URLSearchParams();
+                if (filter) params.set('action', filter);
+                params.set('limit', '500');
+                if (realOnly) params.set('real', 'true');
+                params.set('format', 'csv');
+                window.open(`/api/activity?${params.toString()}`, '_blank', 'noopener,noreferrer');
+              }}
+            >
+              Export CSV
+            </button>
+            <select
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
+            >
+              {ACTION_FILTERS.map(f => (
+                <option key={f.key} value={f.key}>{f.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div className="card p-4">
-        <div className="space-y-0">
+      <div className="panel">
+        <div className="panel-body space-y-0">
           {entries.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
               No activity logged yet
             </div>
           ) : (
-            entries.map((entry, i) => (
-              <div
-                key={entry.id}
-                className={`flex items-start gap-4 py-3 ${
-                  i < entries.length - 1 ? 'border-b border-border/30' : ''
-                }`}
-              >
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                  <ActionIcon action={entry.action} />
+            groupByDay(entries).map(group => (
+              <div key={group.day}>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground py-2">
+                  {group.day}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      {entry.action && (
-                        <span className="text-xs font-medium text-primary uppercase mr-2">
-                          {entry.action}
-                        </span>
-                      )}
-                      <span className="text-sm">{entry.detail || '\u2014'}</span>
+                {group.items.map((entry, i) => (
+                  <div
+                    key={entry.id}
+                    className={`flex items-start gap-4 py-3 ${
+                      i < group.items.length - 1 ? 'border-b border-border/30' : ''
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                      <ActionIcon action={entry.action} />
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {timeAgo(entry.ts)}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {entry.action && (
+                            <span className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded-full ${severityClass(entry.action)}`}>
+                              {entry.action}
+                            </span>
+                          )}
+                          <span className="text-sm">{entry.detail || '\u2014'}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {timeAgo(entry.ts)}
+                        </span>
+                      </div>
+                      {entry.result && (
+                        <p className="text-xs text-success mt-1">{entry.result}</p>
+                      )}
+                    </div>
                   </div>
-                  {entry.result && (
-                    <p className="text-xs text-success mt-1">{entry.result}</p>
-                  )}
-                </div>
+                ))}
               </div>
             ))
           )}
@@ -99,4 +122,32 @@ function ActionIcon({ action }: { action: string | null }) {
     triage: <Activity size={size} />,
   };
   return <>{iconMap[action || ''] || <Info size={size} />}</>;
+}
+
+function severityClass(action: string) {
+  const type = action.toLowerCase();
+  if (type.includes('fail') || type.includes('error') || type.includes('reject')) {
+    return 'bg-destructive/15 text-destructive';
+  }
+  if (type.includes('warn') || type.includes('triage')) {
+    return 'bg-warning/15 text-warning';
+  }
+  if (type.includes('discover') || type.includes('research')) {
+    return 'bg-info/15 text-info';
+  }
+  return 'bg-primary/10 text-primary';
+}
+
+function groupByDay(items: ActivityEntry[]) {
+  const groups: { day: string; items: ActivityEntry[] }[] = [];
+  const byDay = new Map<string, ActivityEntry[]>();
+  for (const entry of items) {
+    const day = entry.ts ? new Date(entry.ts).toLocaleDateString() : 'Unknown';
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day)!.push(entry);
+  }
+  for (const [day, groupItems] of byDay.entries()) {
+    groups.push({ day, items: groupItems });
+  }
+  return groups;
 }

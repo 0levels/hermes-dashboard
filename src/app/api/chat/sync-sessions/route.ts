@@ -3,9 +3,10 @@ import { getDb } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
+import { requireApiUser } from '@/lib/api-auth';
+import { getAgentIds } from '@/lib/agent-config';
 
 const OPENCLAW_DIR = '/home/leads/.openclaw';
-const AGENTS = ['hermes', 'apollo'];
 
 interface SessionEntry {
   type: string;
@@ -24,13 +25,16 @@ interface SessionEntry {
  * Reads JSONL session transcripts and imports user<->agent conversation turns
  * into the messages table. Tracks progress via session_sync table.
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   const db = getDb();
   let imported = 0;
   let skipped = 0;
   const errors: string[] = [];
+  const agentIds = getAgentIds();
 
-  for (const agentId of AGENTS) {
+  for (const agentId of agentIds) {
     const sessionsDir = path.join(OPENCLAW_DIR, 'agents', agentId, 'sessions');
     if (!fs.existsSync(sessionsDir)) continue;
 
@@ -179,7 +183,9 @@ export async function POST() {
 /**
  * GET /api/chat/sync-sessions — status of sync
  */
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   const db = getDb();
   const rows = db.prepare('SELECT * FROM session_sync ORDER BY last_synced_at DESC').all();
   return NextResponse.json({ sessions: rows });

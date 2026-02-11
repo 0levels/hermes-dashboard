@@ -76,3 +76,33 @@ export async function sendAgentMessage(
     return { response: result.stdout.trim() };
   }
 }
+
+/**
+ * Send a message to the default orchestrator routing via leads-admin.
+ * Uses `leads-admin agent --message <text> --json` (no explicit --agent).
+ */
+export async function sendOrchestratorMessage(
+  message: string,
+  sessionId?: string,
+): Promise<{ response: string; sessionId?: string }> {
+  const args = [
+    'agent',
+    '--message', message,
+    '--json',
+  ];
+  if (sessionId) {
+    args.push('--session-id', sessionId);
+  }
+
+  const result = await runLeadsAdmin(args, { timeoutMs: 120_000 });
+
+  try {
+    const data = JSON.parse(result.stdout);
+    return {
+      response: data.response || data.content || result.stdout.trim(),
+      sessionId: data.sessionId,
+    };
+  } catch {
+    return { response: result.stdout.trim() };
+  }
+}

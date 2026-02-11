@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isRealMode } from '@/lib/seed-filter';
+import { requireApiUser } from '@/lib/api-auth';
 
 export async function GET(req: NextRequest) {
+  const auth = requireApiUser(req as Request);
+  if (auth) return auth;
   const q = req.nextUrl.searchParams.get('q')?.trim();
   if (!q || q.length < 2) return NextResponse.json({ results: [] });
 

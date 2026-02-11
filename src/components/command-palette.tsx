@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Search, User, PenLine, Radio, FlaskConical, List,
-  Gauge, MessageCircle, Mail, BarChart3, ArrowRight,
+  Gauge, MessageCircle, Mail, BarChart3, ArrowRight, BrainCircuit, Rocket,
 } from 'lucide-react';
 import { useDashboard } from '@/store';
 
@@ -25,6 +25,8 @@ const NAV_ITEMS = [
   { label: 'Experiments', path: '/experiments', icon: FlaskConical },
   { label: 'Research', path: '/research', icon: Search },
   { label: 'KPIs', path: '/kpis', icon: BarChart3 },
+  { label: 'Memory', path: '/memory', icon: BrainCircuit },
+  { label: 'Deploy', path: '/deploy', icon: Rocket },
   { label: 'Activity', path: '/activity', icon: List },
 ];
 
@@ -51,7 +53,6 @@ export function CommandPalette() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   // Cmd+K / Ctrl+K to toggle
@@ -59,7 +60,15 @@ export function CommandPalette() {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setOpen(o => !o);
+        setOpen(o => {
+          const next = !o;
+          if (next) {
+            setQuery('');
+            setResults([]);
+            setActiveIndex(0);
+          }
+          return next;
+        });
       }
       if (e.key === 'Escape') setOpen(false);
     };
@@ -67,24 +76,13 @@ export function CommandPalette() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Focus input when opened
-  useEffect(() => {
-    if (open) {
-      setQuery('');
-      setResults([]);
-      setActiveIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }, [open]);
-
   // Search debounce
   useEffect(() => {
     if (!query || query.length < 2) {
-      setResults([]);
       return;
     }
-    setLoading(true);
     const timer = setTimeout(() => {
+      setLoading(true);
       fetch(`/api/search?q=${encodeURIComponent(query)}${realOnly ? '&real=true' : ''}`)
         .then(r => r.json())
         .then(data => {
@@ -95,20 +93,32 @@ export function CommandPalette() {
         .finally(() => setLoading(false));
     }, 200);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, realOnly]);
 
   // Filter nav items based on query
-  const filteredNav = query.length > 0
-    ? NAV_ITEMS.filter(n => n.label.toLowerCase().includes(query.toLowerCase()))
-    : NAV_ITEMS;
+  const filteredNav = useMemo(
+    () =>
+      query.length > 0
+        ? NAV_ITEMS.filter(n => n.label.toLowerCase().includes(query.toLowerCase()))
+        : NAV_ITEMS,
+    [query],
+  );
+
+  const visibleResults = useMemo(
+    () => (query.length >= 2 ? results : []),
+    [query, results],
+  );
 
   // Combined items: nav items first, then search results
-  const allItems = [
-    ...filteredNav.map(n => ({ type: 'nav' as const, ...n })),
-    ...results.map(r => ({ type: 'result' as const, ...r })),
-  ];
+  const allItems = useMemo(
+    () => [
+      ...filteredNav.map(n => ({ type: 'nav' as const, ...n })),
+      ...visibleResults.map(r => ({ type: 'result' as const, ...r })),
+    ],
+    [filteredNav, visibleResults],
+  );
 
-  const navigate = useCallback((index: number) => {
+  const navigate = (index: number) => {
     const item = allItems[index];
     if (!item) return;
     if (item.type === 'nav') {
@@ -117,7 +127,7 @@ export function CommandPalette() {
       router.push(CATEGORY_ROUTES[item.category] || '/');
     }
     setOpen(false);
-  }, [allItems, router]);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
@@ -147,16 +157,22 @@ export function CommandPalette() {
         <div className="glass-strong rounded-xl border border-border/50 shadow-2xl overflow-hidden">
           {/* Input */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30">
-            <Search size={18} className="text-muted-foreground shrink-0" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Search leads, content, signals... or navigate"
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-            />
+              <Search size={18} className="text-muted-foreground shrink-0" />
+              <input
+                type="text"
+                value={query}
+                onChange={e => {
+                  const next = e.target.value;
+                  setQuery(next);
+                  if (next.length < 2) {
+                    setLoading(false);
+                  }
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Search leads, content, signals... or navigate"
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                autoFocus
+              />
             <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
               ESC
             </kbd>
@@ -194,12 +210,12 @@ export function CommandPalette() {
             )}
 
             {/* Search results section */}
-            {results.length > 0 && (
+            {visibleResults.length > 0 && (
               <div className="px-3 py-2 border-t border-border/20">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 mb-1">
                   Results
                 </div>
-                {results.map((result, i) => {
+                {visibleResults.map((result, i) => {
                   const Icon = CATEGORY_ICONS[result.category] || List;
                   const idx = filteredNav.length + i;
                   return (
@@ -240,7 +256,7 @@ export function CommandPalette() {
             )}
 
             {/* Empty state */}
-            {!loading && query.length >= 2 && results.length === 0 && filteredNav.length === 0 && (
+            {!loading && query.length >= 2 && visibleResults.length === 0 && filteredNav.length === 0 && (
               <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                 No results for &ldquo;{query}&rdquo;
               </div>

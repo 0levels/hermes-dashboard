@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { requireApiUser } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   const db = getDb();
 
   const seedCount = (db.prepare(

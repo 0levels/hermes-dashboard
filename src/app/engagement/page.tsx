@@ -35,8 +35,19 @@ export default function EngagementPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      <h1 className="text-xl font-semibold">Engagement</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-xl font-semibold">Engagement</h1>
+        <div className="text-xs text-muted-foreground">
+          X <span className="font-mono text-foreground">{xEngagements.length}</span>
+          {' · '}
+          LinkedIn <span className="font-mono text-foreground">{linkedInQueue.length}</span>
+          {' · '}
+          Signals <span className="font-mono text-foreground">{signals.length}</span>
+        </div>
+      </div>
 
+      <div className="panel">
+        <div className="panel-body !p-0">
       <div className="flex gap-0 border-b border-border">
         {([
           { key: 'x' as Tab, label: `X Activity (${xEngagements.length})` },
@@ -52,9 +63,15 @@ export default function EngagementPage() {
           </button>
         ))}
       </div>
+      </div>
+      </div>
 
       {tab === 'x' && (
-        <div className="card overflow-hidden">
+        <div className="panel">
+          <div className="panel-header">
+            <h3 className="section-title">X Activity</h3>
+          </div>
+          <div className="panel-body !p-0">
           <DataTable
             columns={[
               { key: 'action_type', label: 'Action', render: (r: Engagement) => <Badge status={r.action_type || 'reply'} /> },
@@ -77,18 +94,19 @@ export default function EngagementPage() {
             keyField="id"
             emptyMessage="No X engagements yet"
           />
+          </div>
         </div>
       )}
 
       {tab === 'linkedin' && (
         <div className="space-y-3">
           {linkedInQueue.length === 0 ? (
-            <div className="card p-8 text-center text-muted-foreground text-sm">
+            <div className="panel p-8 text-center text-muted-foreground text-sm">
               No LinkedIn comments queued
             </div>
           ) : (
             linkedInQueue.map(item => (
-              <div key={item.id} className="card card-hover p-4 space-y-2">
+              <div key={item.id} className="panel card-hover p-4 space-y-2">
                 <div className="flex items-start justify-between">
                   <div>
                     <span className="font-mono text-xs text-muted-foreground">@{item.target_username}</span>
@@ -119,7 +137,7 @@ export default function EngagementPage() {
       {tab === 'signals' && (
         <div className="space-y-3">
           {signals.length === 0 ? (
-            <div className="card p-8 text-center text-muted-foreground text-sm">
+            <div className="panel p-8 text-center text-muted-foreground text-sm">
               No signals detected yet
             </div>
           ) : (

@@ -1,9 +1,31 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { requireApiUser } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+interface ConversationRow {
+  conversation_id: string;
+  last_message_at: number;
+  message_count: number;
+  unread_count: number;
+}
+
+interface MessageRow {
+  id: number;
+  conversation_id: string;
+  from_agent: string;
+  to_agent: string | null;
+  content: string;
+  message_type: string;
+  metadata: string | null;
+  read_at: number | null;
+  created_at: number;
+}
+
+export async function GET(request: Request) {
+  const auth = requireApiUser(request as Request);
+  if (auth) return auth;
   try {
     const db = getDb();
 
@@ -16,15 +38,15 @@ export async function GET() {
       FROM messages m
       GROUP BY m.conversation_id
       ORDER BY last_message_at DESC
-    `).all() as any[];
+    `).all() as ConversationRow[];
 
-    const withLastMessage = conversations.map((conv: any) => {
+    const withLastMessage = conversations.map((conv) => {
       const lastMsg = db.prepare(`
         SELECT * FROM messages
         WHERE conversation_id = ?
         ORDER BY created_at DESC
         LIMIT 1
-      `).get(conv.conversation_id) as any;
+      `).get(conv.conversation_id) as MessageRow | undefined;
 
       return {
         id: conv.conversation_id,

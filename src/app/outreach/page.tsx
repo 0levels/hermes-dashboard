@@ -73,8 +73,19 @@ export default function OutreachPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      <h1 className="text-xl font-semibold">Outreach</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-xl font-semibold">Outreach</h1>
+        <div className="text-xs text-muted-foreground">
+          Leads <span className="font-mono text-foreground">{leads.length}</span>
+          {' · '}
+          Approvals <span className="font-mono text-foreground">{pendingApprovals.length}</span>
+          {' · '}
+          Suppression <span className="font-mono text-foreground">{suppression.length}</span>
+        </div>
+      </div>
 
+      <div className="panel">
+        <div className="panel-body !p-0">
       <div className="flex gap-0 border-b border-border overflow-x-auto">
         {([
           { key: 'pipeline' as Tab, label: 'Pipeline' },
@@ -92,19 +103,26 @@ export default function OutreachPage() {
           </button>
         ))}
       </div>
+      </div>
+      </div>
 
       {tab === 'pipeline' && (
-        <div className="card p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-4">Lead Funnel</h3>
+        <div className="panel">
+          <div className="panel-header">
+            <h3 className="section-title">Lead Funnel</h3>
+          </div>
+          <div className="panel-body">
           <FunnelChart steps={funnel} />
+          </div>
         </div>
       )}
 
       {tab === 'leads' && (
         <>
-          <div className="flex gap-3">
+          <div className="panel">
+            <div className="panel-body !p-3 flex gap-3 flex-wrap">
             <select
-              className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm"
+              className="px-3"
               value={tierFilter}
               onChange={e => setTierFilter(e.target.value)}
             >
@@ -114,7 +132,7 @@ export default function OutreachPage() {
               <option value="C">Tier C</option>
             </select>
             <select
-              className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm"
+              className="px-3"
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
             >
@@ -123,53 +141,63 @@ export default function OutreachPage() {
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
+            </div>
           </div>
-          <div className="card overflow-hidden">
-            <DataTable
-              columns={[
-                { key: 'first_name', label: 'Name', render: (r: Lead) => (
-                  <span className="font-medium text-sm">{r.first_name} {r.last_name}</span>
-                )},
-                { key: 'company', label: 'Company' },
-                { key: 'title', label: 'Title', render: (r: Lead) => (
-                  <span className="text-xs text-muted-foreground">{r.title}</span>
-                )},
-                { key: 'tier', label: 'Tier', render: (r: Lead) => r.tier ? (
-                  <span className={`badge ${r.tier === 'A' ? 'bg-emerald-900/60 text-emerald-300' : r.tier === 'B' ? 'bg-blue-900/60 text-blue-300' : 'bg-zinc-700 text-zinc-300'}`}>
-                    {r.tier}
-                  </span>
-                ) : <span>\u2014</span> },
-                { key: 'status', label: 'Status', render: (r: Lead) => (
-                  <select
-                    className="bg-muted/50 border border-border rounded px-2 py-0.5 text-xs"
-                    value={r.status}
-                    onChange={e => updateLeadStatus(r.id, e.target.value)}
-                  >
-                    {['new', 'validated', 'contacted', 'replied', 'interested', 'booked', 'qualified', 'disqualified'].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                )},
-                { key: 'score', label: 'Score', sortable: true, render: (r: Lead) => (
-                  <span className="font-mono text-xs">{r.score ?? '\u2014'}</span>
-                )},
-                { key: 'source', label: 'Source', render: (r: Lead) => (
-                  <span className="text-xs text-muted-foreground">{r.source || '\u2014'}</span>
-                )},
-                { key: 'last_touch_at', label: 'Last Touch', render: (r: Lead) => (
-                  <span className="text-xs">{formatDateTime(r.last_touch_at)}</span>
-                )},
-              ]}
-              data={filteredLeads}
-              keyField="id"
-              emptyMessage="No leads"
-            />
+          <div className="panel">
+            <div className="panel-header">
+              <h3 className="section-title">Leads</h3>
+            </div>
+            <div className="panel-body !p-0">
+              <DataTable
+                columns={[
+                  { key: 'first_name', label: 'Name', render: (r: Lead) => (
+                    <span className="font-medium text-sm">{r.first_name} {r.last_name}</span>
+                  )},
+                  { key: 'company', label: 'Company' },
+                  { key: 'title', label: 'Title', render: (r: Lead) => (
+                    <span className="text-xs text-muted-foreground">{r.title}</span>
+                  )},
+                  { key: 'tier', label: 'Tier', render: (r: Lead) => r.tier ? (
+                    <span className={`badge ${r.tier === 'A' ? 'badge-success' : r.tier === 'B' ? 'badge-info' : 'badge-neutral'}`}>
+                      {r.tier}
+                    </span>
+                  ) : <span>\u2014</span> },
+                  { key: 'status', label: 'Status', render: (r: Lead) => (
+                    <select
+                      className="px-2 py-0.5 text-xs min-h-[24px]"
+                      value={r.status}
+                      onChange={e => updateLeadStatus(r.id, e.target.value)}
+                    >
+                      {['new', 'validated', 'contacted', 'replied', 'interested', 'booked', 'qualified', 'disqualified'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  )},
+                  { key: 'score', label: 'Score', sortable: true, render: (r: Lead) => (
+                    <span className="font-mono text-xs">{r.score ?? '\u2014'}</span>
+                  )},
+                  { key: 'source', label: 'Source', render: (r: Lead) => (
+                    <span className="text-xs text-muted-foreground">{r.source || '\u2014'}</span>
+                  )},
+                  { key: 'last_touch_at', label: 'Last Touch', render: (r: Lead) => (
+                    <span className="text-xs">{formatDateTime(r.last_touch_at)}</span>
+                  )},
+                ]}
+                data={filteredLeads}
+                keyField="id"
+                emptyMessage="No leads"
+              />
+            </div>
           </div>
         </>
       )}
 
       {tab === 'sequences' && (
-        <div className="card overflow-hidden">
+        <div className="panel">
+          <div className="panel-header">
+            <h3 className="section-title">Sequences</h3>
+          </div>
+          <div className="panel-body !p-0">
           <DataTable
             columns={[
               { key: 'sequence_name', label: 'Sequence' },
@@ -190,13 +218,14 @@ export default function OutreachPage() {
             keyField="id"
             emptyMessage="No sequences"
           />
+          </div>
         </div>
       )}
 
       {tab === 'approvals' && (
         <div className="space-y-3">
           {pendingApprovals.length === 0 ? (
-            <div className="card p-8 text-center text-muted-foreground text-sm">
+            <div className="panel p-8 text-center text-muted-foreground text-sm">
               No email drafts pending approval
             </div>
           ) : (
@@ -218,7 +247,11 @@ export default function OutreachPage() {
       )}
 
       {tab === 'suppression' && (
-        <div className="card overflow-hidden">
+        <div className="panel">
+          <div className="panel-header">
+            <h3 className="section-title">Suppression</h3>
+          </div>
+          <div className="panel-body !p-0">
           <DataTable
             columns={[
               { key: 'email', label: 'Email' },
@@ -231,6 +264,7 @@ export default function OutreachPage() {
             keyField="email"
             emptyMessage="No suppressed emails"
           />
+          </div>
         </div>
       )}
     </div>

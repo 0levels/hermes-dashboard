@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isRealMode } from '@/lib/seed-filter';
+import { requireApiEditor, requireApiUser } from '@/lib/api-auth';
+import { requireUser } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 
 interface Notification {
   id: number;
@@ -13,6 +16,8 @@ interface Notification {
 }
 
 export async function GET(req: NextRequest) {
+  const auth = requireApiUser(req as Request);
+  if (auth) return auth;
   const { searchParams } = req.nextUrl;
   const db = getDb();
   const excludeSeed = isRealMode(req);
@@ -41,16 +46,31 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const auth = requireApiEditor(req as Request);
+  if (auth) return auth;
+  const actor = requireUser(req as Request);
   const body = await req.json();
   const db = getDb();
 
   if (body.mark_all_read) {
     db.prepare('UPDATE notifications SET read = 1 WHERE read = 0').run();
+    logAudit({
+      actor,
+      action: 'notifications.mark_all_read',
+      target: 'notifications',
+      detail: null,
+    });
     return NextResponse.json({ ok: true });
   }
 
   if (body.id) {
     db.prepare('UPDATE notifications SET read = 1 WHERE id = ?').run(body.id);
+    logAudit({
+      actor,
+      action: 'notifications.mark_read',
+      target: `notification:${body.id}`,
+      detail: null,
+    });
     return NextResponse.json({ ok: true });
   }
 

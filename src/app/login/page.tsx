@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function LoginForm() {
@@ -8,8 +8,21 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const msg = searchParams.get('error');
+    if (msg) setError(msg);
+  }, [searchParams]);
+
+  useEffect(() => {
+    fetch('/api/auth/providers')
+      .then((r) => r.json())
+      .then((data) => setGoogleEnabled(Boolean(data?.google)))
+      .catch(() => setGoogleEnabled(false));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -83,6 +96,15 @@ function LoginForm() {
       >
         {loading ? 'Signing in...' : 'Sign in'}
       </button>
+
+      {googleEnabled && (
+        <a
+          href={`/api/auth/google/start?from=${encodeURIComponent(searchParams.get('from') || '/')}`}
+          className="block w-full py-2.5 rounded-lg border border-[var(--border)] text-center text-sm font-medium hover:bg-[var(--muted)] transition-colors"
+        >
+          Sign in with Google
+        </a>
+      )}
     </form>
   );
 }
