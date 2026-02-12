@@ -25,7 +25,7 @@ export interface ContentPost {
 }
 
 // ─── Leads ─────────────────────────────────────────────
-export type LeadStatus = 'new' | 'validated' | 'contacted' | 'replied' | 'interested' | 'booked' | 'qualified' | 'disqualified';
+export type LeadStatus = "new" | "validated" | "approved" | "contacted" | "replied" | "interested" | "booked" | "qualified" | "rejected" | "disqualified";
 export type LeadTier = 'A' | 'B' | 'C';
 
 export interface Lead {

@@ -76,6 +76,15 @@ const OPENCLAW_AGENTS_DIR = path.join(OPENCLAW_DIR, 'agents');
 
 const DEFAULT_ORDER = ['hermes', 'apollo', 'athena', 'metis', 'kb-manager'];
 
+const AGENT_ID_ALIASES: Record<string, string> = {
+  marketing: 'hermes',
+  sales: 'apollo',
+  knowledge: 'athena',
+  analytics: 'metis',
+  manager: 'kb-manager',
+  core: 'kb-manager',
+};
+
 const STATIC_META: Record<string, AgentStaticMeta> = {
   hermes: {
     name: 'Hermes',
@@ -294,6 +303,11 @@ function parseModelRouting(value: unknown): { primary: string; fallbacks: string
   return { primary, fallbacks };
 }
 
+function normalizeAgentId(id: string): string {
+  const normalized = id.trim().toLowerCase();
+  return AGENT_ID_ALIASES[normalized] ?? normalized;
+}
+
 function discoverAgentIdsFromSessions(): string[] {
   try {
     if (!fs.existsSync(OPENCLAW_AGENTS_DIR)) return [];
@@ -327,12 +341,19 @@ export function getAgents(): AgentDefinition[] {
 
   for (const entry of configuredList) {
     if (!entry || typeof entry.id !== 'string' || !entry.id.trim()) continue;
-    configuredById.set(entry.id, entry);
+    const normalizedId = normalizeAgentId(entry.id);
+    configuredById.set(normalizedId, entry);
   }
 
   const ids = new Set<string>();
-  for (const id of configuredById.keys()) ids.add(id);
-  for (const id of discoverAgentIdsFromSessions()) ids.add(id);
+
+  // Prefer explicit configuration when present, and only fall back to filesystem discovery
+  // for legacy or bootstrap setups where the config list is missing/empty.
+  if (configuredById.size > 0) {
+    for (const id of configuredById.keys()) ids.add(id);
+  } else {
+    for (const id of discoverAgentIdsFromSessions()) ids.add(normalizeAgentId(id));
+  }
 
   if (ids.size === 0) {
     for (const id of Object.keys(STATIC_META)) ids.add(id);

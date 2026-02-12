@@ -137,7 +137,7 @@ export default function OutreachPage() {
               onChange={e => setStatusFilter(e.target.value)}
             >
               <option value="">All Statuses</option>
-              {['new', 'validated', 'contacted', 'replied', 'interested', 'booked', 'qualified'].map(s => (
+              {["new", "validated", "approved", "contacted", "replied", "interested", "booked", "qualified", "rejected", "disqualified"].map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -168,7 +168,7 @@ export default function OutreachPage() {
                       value={r.status}
                       onChange={e => updateLeadStatus(r.id, e.target.value)}
                     >
-                      {['new', 'validated', 'contacted', 'replied', 'interested', 'booked', 'qualified', 'disqualified'].map(s => (
+                      {["new", "validated", "approved", "contacted", "replied", "interested", "booked", "qualified", "rejected", "disqualified"].map(s => (
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>

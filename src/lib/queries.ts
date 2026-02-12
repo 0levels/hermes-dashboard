@@ -173,7 +173,7 @@ export function updateLeadStatus(id: string, status: string): void {
 export function getLeadFunnel(filters?: { excludeSeed?: boolean }): FunnelStep[] {
   const db = getDb();
   const sf = filters?.excludeSeed ? seedFilter('leads') : '';
-  const steps = ['new', 'validated', 'contacted', 'replied', 'interested', 'booked', 'qualified'];
+  const steps = ["new", "validated", "approved", "contacted", "replied", "interested", "booked", "qualified", "rejected", "disqualified"]; 
   return steps.map(name => {
     const row = db.prepare(`SELECT COUNT(*) as c FROM leads WHERE status = ? ${sf}`).get(name) as { c: number };
     return { name, value: row?.c ?? 0 };

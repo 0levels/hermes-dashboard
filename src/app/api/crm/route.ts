@@ -7,7 +7,21 @@ import { requireApiEditor, requireApiUser } from '@/lib/api-auth';
 import { requireUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+const LEAD_APPROVED_STATUS = "approved";
+const ALLOWED_LEAD_STATUSES = new Set([
+  "new",
+  "validated",
+  "approved",
+  "contacted",
+  "replied",
+  "interested",
+  "booked",
+  "qualified",
+  "rejected",
+  "disqualified",
+]);
 
 export async function GET(request: Request) {
   const auth = requireApiUser(request as Request);
@@ -121,7 +135,7 @@ export async function GET(request: Request) {
   sql += ' ORDER BY score DESC, created_at DESC';
   const leads = db.prepare(sql).all(...params) as Lead[];
 
-  const stages = ['new', 'validated', 'contacted', 'replied', 'interested', 'booked', 'qualified', 'disqualified'];
+  const stages = ["new", "validated", "approved", "contacted", "replied", "interested", "booked", "qualified", "rejected", "disqualified"]; 
   const funnel: FunnelStep[] = stages.map(name => {
     const row = db.prepare(`SELECT COUNT(*) as c FROM leads WHERE status = ?${seedExcludeLeads}`).get(name) as { c: number };
     return { name, value: row?.c ?? 0 };
@@ -181,17 +195,27 @@ export async function PATCH(request: Request) {
     const db = getDb();
 
     // Sequence update (approve/reject)
-    if (type === 'sequence') {
-      const allowedStatuses = ['approved', 'cancelled', 'queued'];
-      const nextStatus = typeof updates.status === 'string' ? updates.status : null;
+    if (type === "sequence") {
+      const allowedStatuses = ["approved", "cancelled", "queued"];
+      const nextStatus = typeof updates.status === "string" ? updates.status : null;
       if (!nextStatus || !allowedStatuses.includes(nextStatus)) {
-        return NextResponse.json({ error: 'Invalid sequence status' }, { status: 400 });
+        return NextResponse.json({ error: "Invalid sequence status" }, { status: 400 });
       }
-      db.prepare('UPDATE sequences SET status = ? WHERE id = ?').run(nextStatus, id);
+
+      if (nextStatus === "approved" || nextStatus === "queued") {
+        const lead = db.prepare(
+          "SELECT l.status as lead_status FROM sequences s LEFT JOIN leads l ON l.id = s.lead_id WHERE s.id = ?"
+        ).get(id) as { lead_status: string | null } | undefined;
+        if (!lead || lead.lead_status !== LEAD_APPROVED_STATUS) {
+          return NextResponse.json({ error: "Lead must be approved before outreach can be queued or approved" }, { status: 409 });
+        }
+      }
+
+      db.prepare("UPDATE sequences SET status = ? WHERE id = ?").run(nextStatus, id);
       writebackSequenceStatus(id, nextStatus);
       logAudit({
         actor,
-        action: 'crm.sequence.update_status',
+        action: "crm.sequence.update_status",
         target: `sequence:${id}`,
         detail: { status: nextStatus },
       });
@@ -199,14 +223,19 @@ export async function PATCH(request: Request) {
     }
 
     // Lead update
-    const allowed = ['status', 'tier', 'notes', 'pause_outreach', 'next_action_at'];
+    const allowed = ["status", "tier", "notes", "pause_outreach", "next_action_at"]; 
     const cols: string[] = [];
     const params: unknown[] = [];
     const before = db.prepare('SELECT status, tier, notes, pause_outreach, next_action_at FROM leads WHERE id = ?').get(id) as Lead | undefined;
 
     for (const key of allowed) {
       if (updates[key] !== undefined) {
-        if (key === 'pause_outreach') {
+        if (key === "status") {
+          if (typeof updates[key] !== "string" || !ALLOWED_LEAD_STATUSES.has(updates[key] as string)) {
+            return NextResponse.json({ error: "Invalid lead status" }, { status: 400 });
+          }
+        }
+        if (key === "pause_outreach") {
           cols.push(`${key} = ?`);
           params.push(updates[key] ? 1 : 0);
         } else {

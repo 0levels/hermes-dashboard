@@ -37,27 +37,31 @@ interface LeadDetail {
   timeline: { id: number; type: string; description: string; timestamp: string }[];
 }
 
-const STAGES = ['new', 'validated', 'contacted', 'replied', 'interested', 'booked', 'qualified'] as const;
+const STAGES = ['new', 'validated', 'approved', 'contacted', 'replied', 'interested', 'booked', 'qualified'] as const;
 
 const STAGE_ICONS: Record<string, typeof Send> = {
   new: CircleDot,
   validated: CheckCircle,
+  approved: Check,
   contacted: Send,
   replied: MessageSquare,
   interested: Eye,
   booked: CalendarCheck,
   qualified: Star,
+  rejected: XCircle,
   disqualified: Ban,
 };
 
 const STAGE_COLORS: Record<string, string> = {
   new: 'text-muted-foreground',
   validated: 'text-info',
+  approved: 'text-success',
   contacted: 'text-primary',
   replied: 'text-warning',
   interested: 'text-success',
   booked: 'text-success',
   qualified: 'text-success',
+  rejected: 'text-destructive',
   disqualified: 'text-destructive',
 };
 
@@ -504,7 +508,8 @@ function KanbanBoard({
     return acc;
   }, {});
 
-  // Also add disqualified column
+  // Also add rejected/disqualified columns
+  const rejectedLeads = leads.filter(l => l.status === 'rejected');
   const dqLeads = leads.filter(l => l.status === 'disqualified');
 
   return (
@@ -552,6 +557,35 @@ function KanbanBoard({
               />
             );
           })}
+
+          {/* Rejected column */}
+          {rejectedLeads.length > 0 && (
+            <KanbanColumn
+              stage="rejected"
+              icon={XCircle}
+              count={rejectedLeads.length}
+              leads={rejectedLeads}
+              selectedLead={selectedLead}
+              canEdit={canEdit}
+              slaStaleDays={slaStaleDays}
+              slaNewDays={slaNewDays}
+              isDragOver={dragOverStage === 'rejected'}
+              onSelectLead={onSelectLead}
+              onDragOver={(e) => {
+                if (!canEdit) return;
+                e.preventDefault();
+                setDragOverStage('rejected');
+              }}
+              onDragLeave={() => setDragOverStage(null)}
+              onDrop={(e) => {
+                if (!canEdit) return;
+                e.preventDefault();
+                setDragOverStage(null);
+                const leadId = e.dataTransfer.getData('text/plain');
+                if (leadId) onDropLead(leadId, 'rejected');
+              }}
+            />
+          )}
 
           {/* Disqualified column */}
           {dqLeads.length > 0 && (
@@ -1089,7 +1123,7 @@ function LeadDetailPanel({ id, onClose, onMutate, canEdit, slaStaleDays, slaNewD
           {canAdvance ? STAGES[currentStageIdx + 1] : 'Done'}
           <ChevronRight size={14} />
         </button>
-        {lead.status !== 'disqualified' && (
+        {lead.status !== 'disqualified' && lead.status !== 'rejected' && (
           <button
             disabled={!canEdit || saving}
             onClick={() => patchLead({ status: 'disqualified' })}
@@ -1099,6 +1133,24 @@ function LeadDetailPanel({ id, onClose, onMutate, canEdit, slaStaleDays, slaNewD
             <Ban size={14} />
           </button>
         )}
+      </div>
+
+      {/* Lead Triage */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => patchLead({ status: 'approved' })}
+          disabled={!canEdit || saving || lead.status === 'approved'}
+          className="btn btn-sm bg-success/15 text-success hover:bg-success/25 disabled:opacity-40"
+        >
+          <Check size={12} /> Approve Lead
+        </button>
+        <button
+          onClick={() => patchLead({ status: 'rejected' })}
+          disabled={!canEdit || saving || lead.status === 'rejected'}
+          className="btn btn-sm bg-destructive/15 text-destructive hover:bg-destructive/25 disabled:opacity-40"
+        >
+          <XCircle size={12} /> Reject Lead
+        </button>
       </div>
 
       {/* Pause Toggle */}

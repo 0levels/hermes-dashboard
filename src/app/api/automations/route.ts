@@ -3,15 +3,116 @@ import { getDb } from '@/lib/db';
 import { getAgents, ACTION_TO_AGENT } from '@/lib/agent-config';
 import type { ApprovalItem, SkillExecution } from '@/types';
 import { requireApiUser } from '@/lib/api-auth';
+import fs from 'node:fs';
+import path from 'node:path';
 
 export const dynamic = 'force-dynamic';
+
+const CRON_JOBS_PATH = '/home/leads/.openclaw/cron/jobs.json';
+const CRON_RUNS_DIR = '/home/leads/.openclaw/cron/runs';
+const DECISION_WINDOW_DAYS = 7;
+
+type CronJob = {
+  id?: string;
+  payload?: { message?: string };
+};
+
+type CronRun = {
+  ts?: number | string;
+  summary?: string | null;
+  error?: string | null;
+  status?: string;
+};
+
+function readCronJobs(): CronJob[] {
+  try {
+    const raw = fs.readFileSync(CRON_JOBS_PATH, 'utf-8');
+    const parsed = JSON.parse(raw) as { jobs?: CronJob[] };
+    return Array.isArray(parsed.jobs) ? parsed.jobs : [];
+  } catch {
+    return [];
+  }
+}
+
+function extractDecision(text: string): 'SCALE' | 'ITERATE' | 'KILL' | null {
+  const m = text.match(/\b(SCALE|ITERATE|KILL)\b/i);
+  if (!m) return null;
+  return m[1].toUpperCase() as 'SCALE' | 'ITERATE' | 'KILL';
+}
+
+function readRecentRuns(jobId: string): CronRun[] {
+  const file = path.join(CRON_RUNS_DIR, `${jobId}.jsonl`);
+  if (!fs.existsSync(file)) return [];
+  try {
+    const lines = fs.readFileSync(file, 'utf-8').split('\n').filter(Boolean);
+    return lines.slice(-200)
+      .map((line) => {
+        try {
+          return JSON.parse(line) as CronRun;
+        } catch {
+          return null;
+        }
+      })
+      .filter((r): r is CronRun => !!r);
+  } catch {
+    return [];
+  }
+}
+
+function computeExperimentInsights() {
+  const jobs = readCronJobs();
+  const total = jobs.length;
+  const withContract = jobs.filter((j) => (j.payload?.message || '').includes('EXPERIMENT_CONTRACT:'));
+  const withoutContract = jobs.filter((j) => !(j.payload?.message || '').includes('EXPERIMENT_CONTRACT:'));
+
+  const cutoffMs = Date.now() - DECISION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const counts = { SCALE: 0, ITERATE: 0, KILL: 0 };
+  const recent: Array<{ job_id: string; ts: number; status: string; decision: 'SCALE' | 'ITERATE' | 'KILL'; snippet: string }> = [];
+
+  for (const job of withContract) {
+    const jobId = job.id;
+    if (!jobId) continue;
+    const runs = readRecentRuns(jobId);
+    for (const run of runs) {
+      const tsNum = typeof run.ts === 'number' ? run.ts : Number(new Date(run.ts || '').getTime());
+      if (!Number.isFinite(tsNum) || tsNum < cutoffMs) continue;
+      const text = `${run.summary || ''}\n${run.error || ''}`;
+      const decision = extractDecision(text);
+      if (!decision) continue;
+      counts[decision] += 1;
+      recent.push({
+        job_id: jobId,
+        ts: tsNum,
+        status: run.status || 'unknown',
+        decision,
+        snippet: text.slice(0, 180),
+      });
+    }
+  }
+
+  recent.sort((a, b) => b.ts - a.ts);
+
+  return {
+    contract: {
+      total_jobs: total,
+      with_contract: withContract.length,
+      without_contract: withoutContract.length,
+      compliance_pct: total > 0 ? Math.round((withContract.length / total) * 100) : 0,
+      missing_job_ids: withoutContract.map((j) => j.id || 'unknown').slice(0, 20),
+    },
+    decisions: {
+      window_days: DECISION_WINDOW_DAYS,
+      counts,
+      recent: recent.slice(0, 12),
+    },
+  };
+}
 
 export async function GET(request: Request) {
   const auth = requireApiUser(request as Request);
   if (auth) return auth;
   const db = getDb();
 
-  // Approval queue: pending content + pending sequences
   const pendingContent = db.prepare(
     `SELECT id, platform, text_preview, status, created_at
      FROM content_posts WHERE status = 'pending_approval'
@@ -46,7 +147,6 @@ export async function GET(request: Request) {
     })),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  // Skill execution stats (from activity_log, last 30 days)
   const actionCounts = db.prepare(
     `SELECT action, COUNT(*) as c, MAX(ts) as last_run
      FROM activity_log
@@ -63,7 +163,6 @@ export async function GET(request: Request) {
       last_run: a.last_run,
     }));
 
-  // Cron schedule (flattened from all agents)
   const schedule = getAgents().flatMap((agent) =>
     agent.cronJobs.map(job => ({
       ...job,
@@ -72,14 +171,12 @@ export async function GET(request: Request) {
       agentEmoji: agent.emoji,
     }))
   ).sort((a, b) => {
-    // Sort by time of day
     const timeA = a.schedule.match(/(\d+):(\d+)/);
     const timeB = b.schedule.match(/(\d+):(\d+)/);
     if (!timeA || !timeB) return 0;
     return (parseInt(timeA[1]) * 60 + parseInt(timeA[2])) - (parseInt(timeB[1]) * 60 + parseInt(timeB[2]));
   });
 
-  // Today's activity count by hour
   const today = new Date().toISOString().slice(0, 10);
   const hourlyActivity = db.prepare(
     `SELECT CAST(strftime('%H', ts) AS INTEGER) as hour, COUNT(*) as c
@@ -87,15 +184,20 @@ export async function GET(request: Request) {
      GROUP BY hour ORDER BY hour`
   ).all(today) as { hour: number; c: number }[];
 
+  const experiment = computeExperimentInsights();
+
   return NextResponse.json({
     approvals,
     skill_executions: skillExecutions,
     schedule,
     hourly_activity: hourlyActivity,
+    experiment,
     summary: {
       pending_approvals: approvals.length,
       total_executions_30d: skillExecutions.reduce((s, e) => s + e.count, 0),
       active_cron_jobs: schedule.length,
+      experiment_compliance_pct: experiment.contract.compliance_pct,
+      experiment_decisions_7d: experiment.decisions.counts.SCALE + experiment.decisions.counts.ITERATE + experiment.decisions.counts.KILL,
     },
   });
 }
