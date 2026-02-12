@@ -1,0 +1,34 @@
+[Unit]
+Description=Hermes Dashboard (Next.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Template default. Prefer deploying the repo to /opt/hermes-dashboard (or similar)
+# instead of user home directories.
+WorkingDirectory=/opt/hermes-dashboard
+
+# Secrets belong in an EnvironmentFile, not in the unit file.
+# Point this at your deployment-specific env file.
+EnvironmentFile=-/etc/hermes-dashboard/hermes-dashboard.env
+
+ExecStart=/usr/bin/pnpm start
+Restart=on-failure
+RestartSec=3
+
+# Run as a dedicated user in template deployments.
+User=hermes
+Group=hermes
+
+# Hardening baseline. Adjust ReadWritePaths to match your HERMES_DB_PATH/HERMES_STATE_DIR.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/hermes-dashboard /var/lib/hermes-dashboard
+
+[Install]
+WantedBy=multi-user.target
+
