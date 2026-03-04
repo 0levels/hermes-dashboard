@@ -9,12 +9,11 @@ Last reviewed: 2026-03-04
 ## Screenshots
 
 ### Overview
+![Hermes Dashboard Mission Control](./public/hermes-dashboard-mission-control.png)
 
-![Hermes Dashboard Overview](./public/hermes-dashboard-overview.png)
 
 ### CRM
-
-![Hermes Dashboard Mission Control](./public/hermes-dashboard-mission-control.png)
+![Hermes Dashboard CRM](./public/hermes-dashboard-overview.png)
 
 ## Core Features
 
