@@ -12,7 +12,7 @@ Run CRM, outreach, content, analytics, and automation workflows from one dashboa
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-local-003B57?logo=sqlite&logoColor=white)](https://sqlite.org/)
 
-![Hermes Dashboard Overview](./public/hermes-dashboard-overview.png)
+![Hermes Dashboard Overview](./public/hermes-dashboard-mission-control.png)
 
 </div>
 
@@ -33,12 +33,12 @@ Hermes is built for operator-led AI marketing systems where you need execution v
 ## Screenshots
 
 ### Overview
-
-![Hermes Dashboard Overview](./public/hermes-dashboard-overview.png)
+![Hermes Dashboard CRM](./public/hermes-dashboard-mission-control.png)
 
 ### CRM
+![Hermes Dashboard Overview](./public/hermes-dashboard-overview.png)
 
-![Hermes Dashboard CRM](./public/hermes-dashboard-mission-control.png)
+
 
 ## Quick Start
 
