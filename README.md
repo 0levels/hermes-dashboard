@@ -1,140 +1,158 @@
+<div align="center">
+
 # Hermes Dashboard
 
-Hermes Dashboard is an MIT-licensed, local-first control center for AI marketing operations on top of OpenClaw.
+**The open-source marketing operations control center for AI agent teams.**
 
-It unifies CRM, outreach, content, analytics, approvals, automations, and agent ops in one Next.js + SQLite app that can run with zero external infrastructure.
+Run CRM, outreach, content, analytics, and automation workflows from one dashboard, powered by OpenClaw + SQLite.
 
-Last reviewed: 2026-03-04
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-local-003B57?logo=sqlite&logoColor=white)](https://sqlite.org/)
+
+![Hermes Dashboard Overview](./public/hermes-dashboard-overview.png)
+
+</div>
+
+---
+
+> **Alpha Software** — Hermes Dashboard is under active development. APIs, data models, and configuration behavior can change between releases.
+
+## Why Hermes Dashboard?
+
+Hermes is built for operator-led AI marketing systems where you need execution visibility and control, not disconnected tools.
+
+- **Marketing system in one place** — CRM, outreach, content ops, analytics, experiments, and automations
+- **OpenClaw-native operations** — Dynamic agent/squad discovery, cron templates, workspace and comms surfaces
+- **Local-first stack** — Next.js + SQLite, no required external infra to run locally
+- **Secure-by-default template posture** — Session auth, API key support, host lock, and writeback controls disabled by default
+- **Production workflow support** — Deploy status, auditability, role-based access, and e2e-covered auth/API flows
 
 ## Screenshots
 
 ### Overview
-![Hermes Dashboard Mission Control](./public/hermes-dashboard-mission-control.png)
 
+![Hermes Dashboard Overview](./public/hermes-dashboard-overview.png)
 
 ### CRM
-![Hermes Dashboard CRM](./public/hermes-dashboard-overview.png)
 
-## Core Features
-
-- CRM pipeline with lead records, source tracking, and funnel views
-- Outreach operations with sequencing, pause controls, and audit logs
-- Content system with calendar, item tracking, and performance endpoints
-- Analytics and KPI surfaces for growth and operator visibility
-- Agent workspace, comms, squads, and dynamic OpenClaw agent discovery
-- Cron jobs and templates for repeatable research and automation workflows
-- Role-based access with session auth and optional API key access
-- Local SQLite-backed APIs with no required managed backend
-
-## Architecture
-
-- Frontend: Next.js App Router + React + TypeScript
-- Backend: Next.js API routes
-- Data: SQLite (local)
-- Agent runtime: OpenClaw CLI + filesystem integrations
-- Auth: Local user/session auth, optional Google SSO
+![Hermes Dashboard CRM](./public/hermes-dashboard-mission-control.png)
 
 ## Quick Start
 
-### 1. Install dependencies
+> **Requires [pnpm](https://pnpm.io/installation)** — install with `npm install -g pnpm` or `corepack enable`.
 
 ```bash
+git clone https://github.com/builderz-labs/hermes-dashboard.git
+cd hermes-dashboard
 pnpm install
-```
-
-### 2. Bootstrap environment
-
-```bash
 pnpm env:bootstrap
-```
-
-This creates `.env.local` with generated secure defaults and placeholders.
-
-### 3. Configure required auth values
-
-Required:
-
-- `AUTH_USER`
-- `AUTH_PASS` (minimum 10 characters)
-- `API_KEY`
-- `AUTH_COOKIE_SECURE` (`false` for local HTTP, `true` for HTTPS)
-
-### 4. Run the app
-
-```bash
 pnpm dev
 ```
 
 Open `http://localhost:3000`.
 
-## Optional 1Password Runtime Overlay
+Initial admin access is seeded from `AUTH_USER` / `AUTH_PASS` on first run when the users table is empty.
 
-Hermes supports optional 1Password env resolution with fallback to local environment values.
+## Project Status
 
-- `HERMES_1PASSWORD_MODE=off`: never use 1Password
-- `HERMES_1PASSWORD_MODE=auto` (default): try 1Password, fallback to existing env
-- `HERMES_1PASSWORD_MODE=required`: fail startup if 1Password resolution fails
-- `HERMES_OP_ENV_FILE=/etc/hermes-dashboard/hermes-dashboard.op.env`: custom op env mapping file
+### What Works
 
-Reference template:
+- CRM leads, pipeline funnel, source tracking, and engagement APIs
+- Outreach sequencing, pause/audit endpoints, and suppression workflows
+- Content operations with calendar, item, and performance APIs
+- Analytics/KPI views with optional connectors (Plausible, GA4, social)
+- Dynamic OpenClaw agent discovery for agents and squads
+- Cron jobs/templates with OpenClaw-compatible schedule variants (`cron`, `every`, `at`)
+- Deploy status endpoint with OpenClaw config validation preflight
+- Session auth + API key auth with role-based access controls
 
-- `ops/1password/hermes-dashboard.op.env.example`
+### Known Limitations
 
-## OpenClaw Integration Notes
+- Alpha surface area is still evolving; expect occasional schema/UI shifts
+- Certain integrations require external provider setup and credentials
 
-- Designed for OpenClaw-based agent workflows and cron automation.
-- Cron compatibility supports both `jobId` and legacy `id` fields.
-- Schedule rendering handles `cron`, `every`, and `at` schedule kinds.
-- Deploy status includes OpenClaw config preflight validation (`openclaw config validate --json`).
+### Security Considerations
 
-## Host Access Lock
+- Change seeded credentials (`AUTH_USER`, `AUTH_PASS`, `API_KEY`) before network deployment
+- Keep host lock enabled unless you explicitly need broader access (`HERMES_HOST_LOCK=local` by default)
+- Keep writeback flags disabled unless required:
+  - `HERMES_ALLOW_POLICY_WRITE=false`
+  - `HERMES_ALLOW_CRON_WRITE=false`
+  - `HERMES_ALLOW_WORKSPACE_WRITE=false`
+- Never commit real credentials or personal data
 
-Default behavior keeps Hermes local-first.
+## Architecture
 
-- `HERMES_HOST_LOCK=local` (default): allows `localhost`, `127.0.0.1`, and Tailscale hosts
-- `HERMES_HOST_LOCK=off`: disables host lock
-- `HERMES_HOST_LOCK=host1,host2`: explicit allowlist
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19 + TypeScript |
+| Data | SQLite (local state in `./state`) |
+| Agent Runtime | OpenClaw CLI + filesystem integration |
+| Auth | Session cookie + API key + optional Google OAuth |
 
-## Authentication Model
+## Configuration
 
-- Protected pages and API routes require authenticated sessions.
-- API routes also support `x-api-key` when it matches `API_KEY`.
-- When the users table is empty, first admin is seeded from `AUTH_USER` + `AUTH_PASS`.
-- There are no hardcoded fallback credentials.
-- Roles: `admin`, `editor`/`operator`, `viewer`.
+See [`.env.example`](.env.example) for the full list.
 
-## Scripts
+### Required
 
-- `pnpm dev`
-- `pnpm lint`
-- `pnpm test`
-- `pnpm test:e2e`
-- `pnpm build`
-- `pnpm start`
-- `pnpm seed`
-- `pnpm env:bootstrap`
-- `pnpm prepare:standalone`
-- `pnpm build:standalone`
+- `AUTH_USER`
+- `AUTH_PASS` (minimum 10 chars)
+- `API_KEY`
+- `AUTH_COOKIE_SECURE` (`false` for HTTP local dev, `true` for HTTPS)
 
-## Template-Ready Export and Hygiene
+### OpenClaw / Multi-instance
 
-Before sharing or publishing as a template:
+- `HERMES_OPENCLAW_HOME`
+- `HERMES_DEFAULT_INSTANCE`
+- `HERMES_OPENCLAW_INSTANCES` (optional JSON array for multi-instance)
+
+### Optional 1Password Runtime Overlay
+
+- `HERMES_1PASSWORD_MODE=off|auto|required` (`auto` is default behavior)
+- `HERMES_OP_ENV_FILE=/etc/hermes-dashboard/hermes-dashboard.op.env`
+- Example mapping: `ops/1password/hermes-dashboard.op.env.example`
+
+### Host Access Lock
+
+- `HERMES_HOST_LOCK=local` (default)
+- `HERMES_HOST_LOCK=off`
+- `HERMES_HOST_LOCK=host1,host2`
+
+## Development
+
+```bash
+pnpm dev
+pnpm build
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm test:e2e
+```
+
+## Template Export and Hygiene
+
+Before publishing as a template or sharing broadly:
 
 ```bash
 ./scripts/template-audit.sh
 ./scripts/template-export.sh [output_dir]
 ```
 
-The export flow excludes sensitive/runtime artifacts such as `.env*`, databases, `.next`, `node_modules`, and local state.
+Export excludes sensitive/runtime artifacts like `.env*`, database files, `.next`, and `node_modules`.
 
-## Open Source and Governance
+## Open Source
 
 - License: [MIT](./LICENSE)
-- Security policy: [SECURITY.md](./SECURITY.md)
-- Contributing guide: [CONTRIBUTING.md](./CONTRIBUTING.md)
-- Code of conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
-- Third-party notices: [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)
+- Security: [SECURITY.md](./SECURITY.md)
+- Contributing: [CONTRIBUTING.md](./CONTRIBUTING.md)
+- Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+- Third-Party Notices: [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)
 
-## Security Reminder
+## License
 
-Do not commit real credentials, API tokens, or personal data. Use `.env.local`, 1Password references, and the template export scripts for safe distribution.
+[MIT](LICENSE) © 2026 [Builderz Labs](https://github.com/builderz-labs)
